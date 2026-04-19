@@ -295,7 +295,7 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
   </div>
 
   <div id="tourneyActive" style="display:none">
-    <!-- Timer -->
+    <!-- Timer + Game Controls -->
     <div class="round-header">
       <div>
         <div style="font-size:.72rem;color:rgba(255,255,255,.7);font-weight:700">CURRENT ROUND</div>
@@ -304,13 +304,26 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
       </div>
       <div style="text-align:right">
         <div id="countdownTimer" class="timer-disp">12:00</div>
-        <div style="margin-top:4px">
-          <button class="btn btn-sm" id="timerBtn" onclick="toggleTimer()" style="background:rgba(255,255,255,.2);color:white;font-size:.72rem">▶ Start</button>
-          <button class="btn btn-sm" onclick="resetTimer()" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);font-size:.72rem;margin-left:4px">↺</button>
-        </div>
+        <div style="font-size:.65rem;color:rgba(255,255,255,.5);margin-top:2px" id="timerStatus">Ready to start</div>
       </div>
     </div>
     <div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+
+    <!-- Big game control buttons — visible to everyone -->
+    <div id="gameControls" style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="btnStart" onclick="startGame()"
+        style="flex:2;padding:14px;border-radius:12px;border:none;background:var(--green);color:white;font-family:'Fredoka One',cursive;font-size:1.1rem;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.15)">
+        ▶ Start Game
+      </button>
+      <button id="btnPause" onclick="pauseGame()"
+        style="flex:1;padding:14px;border-radius:12px;border:none;background:#f57c00;color:white;font-family:'Fredoka One',cursive;font-size:1rem;cursor:pointer;display:none">
+        ⏸ Pause
+      </button>
+      <button id="btnFinish" onclick="finishGame()"
+        style="flex:1;padding:14px;border-radius:12px;border:none;background:var(--red);color:white;font-family:'Fredoka One',cursive;font-size:1rem;cursor:pointer">
+        🏁 Finish
+      </button>
+    </div>
 
     <!-- Locked score section -->
     <div class="locked-overlay" id="tourneyAdminSection">
@@ -967,7 +980,7 @@ async function nextRound() {
 
   const res = await apiPost('advance', {});
   if (res?.state) { state = res.state; localLastUpdated = Date.now(); }
-  resetTimer();
+  resetGameState();
   renderTourney();
   if (document.getElementById('page-map').classList.contains('active')) renderMap();
   window.scrollTo(0,0);
@@ -1084,32 +1097,100 @@ function renderLadderSVG(round) {
 // ════════════════════════════════════════════
 // TIMER
 // ════════════════════════════════════════════
-function toggleTimer() {
-  if (timerRunning) {
-    clearInterval(timerInterval); timerRunning = false;
-    document.getElementById('timerBtn').textContent = '▶ Resume';
-  } else {
-    timerRunning = true;
-    document.getElementById('timerBtn').textContent = '⏸ Pause';
-    timerInterval = setInterval(() => {
-      timerSeconds--;
-      if (timerSeconds <= 0) {
-        timerSeconds = 0; clearInterval(timerInterval); timerRunning = false;
-        document.getElementById('timerBtn').textContent = '🔔 Time!';
-        document.getElementById('countdownTimer').style.color = '#ff6b6b';
-        if (navigator.vibrate) navigator.vibrate([500,200,500]);
-        alert('⏰ 12 minutes — finish the ball in play!');
-      }
-      updateTimerDisplay();
-    }, 1000);
+// GAME CONTROLS — Start / Pause / Finish
+// ════════════════════════════════════════════
+let gameState = 'idle'; // idle | running | paused | finished
+
+function startGame() {
+  if (gameState === 'finished') return;
+  if (gameState === 'idle') timerSeconds = 720; // fresh start
+  gameState = 'running';
+  updateGameButtons();
+  timerRunning = true;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timerSeconds--;
+    if (timerSeconds <= 0) {
+      timerSeconds = 0;
+      clearInterval(timerInterval);
+      timerRunning = false;
+      gameState = 'finished';
+      updateGameButtons();
+      document.getElementById('countdownTimer').style.color = '#ff6b6b';
+      document.getElementById('timerStatus').textContent = '⏰ Time — finish ball in play!';
+      if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+    }
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function pauseGame() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  gameState = 'paused';
+  updateGameButtons();
+}
+
+function finishGame() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  gameState = 'finished';
+  timerSeconds = 0;
+  document.getElementById('countdownTimer').style.color = '#ff6b6b';
+  updateTimerDisplay();
+  updateGameButtons();
+  document.getElementById('timerStatus').textContent = '🏁 Game over — enter scores below';
+  if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerSeconds = 720;
+  gameState = 'idle';
+  document.getElementById('countdownTimer').style.color = 'white';
+  document.getElementById('timerStatus').textContent = 'Ready to start';
+  updateTimerDisplay();
+  updateGameButtons();
+}
+
+function updateGameButtons() {
+  const btnStart  = document.getElementById('btnStart');
+  const btnPause  = document.getElementById('btnPause');
+  const btnFinish = document.getElementById('btnFinish');
+  if (!btnStart) return;
+
+  if (gameState === 'idle') {
+    btnStart.textContent = '▶ Start Game';
+    btnStart.style.background = 'var(--green)';
+    btnStart.style.display = '';
+    btnPause.style.display = 'none';
+    btnFinish.style.display = '';
+    document.getElementById('timerStatus').textContent = 'Ready to start';
+    document.getElementById('countdownTimer').style.color = 'white';
+  } else if (gameState === 'running') {
+    btnStart.style.display = 'none';
+    btnPause.style.display = '';
+    btnFinish.style.display = '';
+    document.getElementById('timerStatus').textContent = '🟢 Game in progress';
+  } else if (gameState === 'paused') {
+    btnStart.textContent = '▶ Resume';
+    btnStart.style.background = '#f57c00';
+    btnStart.style.display = '';
+    btnPause.style.display = 'none';
+    btnFinish.style.display = '';
+    document.getElementById('timerStatus').textContent = '⏸ Paused';
+  } else if (gameState === 'finished') {
+    btnStart.textContent = '↺ New Game';
+    btnStart.style.background = '#607d8b';
+    btnStart.style.display = '';
+    btnPause.style.display = 'none';
+    btnFinish.style.display = 'none';
+    // Override start to reset
+    btnStart.onclick = () => { resetTimer(); };
   }
 }
-function resetTimer() {
-  clearInterval(timerInterval); timerRunning = false; timerSeconds = 720;
-  document.getElementById('timerBtn').textContent = '▶ Start';
-  document.getElementById('countdownTimer').style.color = 'white';
-  updateTimerDisplay();
-}
+
 function updateTimerDisplay() {
   const m = Math.floor(timerSeconds/60), s = timerSeconds%60;
   document.getElementById('countdownTimer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
@@ -1117,6 +1198,21 @@ function updateTimerDisplay() {
   const fill = document.getElementById('timerFill');
   fill.style.width = pct + '%';
   fill.style.background = timerSeconds < 60 ? '#e53935' : timerSeconds < 180 ? '#f57c00' : 'var(--green)';
+}
+
+// Reset game state when moving to a new round
+function resetGameState() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerSeconds = 720;
+  gameState = 'idle';
+  const timer = document.getElementById('countdownTimer');
+  if (timer) timer.style.color = 'white';
+  updateTimerDisplay();
+  updateGameButtons();
+  // Re-bind start button after reset
+  const btnStart = document.getElementById('btnStart');
+  if (btnStart) btnStart.onclick = startGame;
 }
 
 // ════════════════════════════════════════════
