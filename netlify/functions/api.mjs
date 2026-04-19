@@ -17,6 +17,17 @@ function respond(data, status = 200) {
   });
 }
 
+// Empty state — no hardcoded roster. Players come from the app UI.
+function getDefaultState() {
+  return {
+    players: [],
+    rounds: [],
+    currentRound: 0,
+    tourneyStarted: false,
+    lastUpdated: Date.now(),
+  };
+}
+
 export default async function handler(req) {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS });
@@ -25,8 +36,6 @@ export default async function handler(req) {
   const url = new URL(req.url);
   const action = url.searchParams.get("action") || "state";
   const tourney = url.searchParams.get("tourney") || "live";
-
-  // Validate tourney key to prevent arbitrary blob keys
   const storeKey = VALID_TOURNEYS.includes(tourney) ? `tournament-${tourney}` : "tournament-live";
 
   let store;
@@ -132,16 +141,6 @@ export default async function handler(req) {
 
 export const config = { path: "/api" };
 
-function getDefaultState() {
-  return {
-    players: DEFAULT_ROSTER,
-    rounds: [],
-    currentRound: 0,
-    tourneyStarted: false,
-    lastUpdated: Date.now(),
-  };
-}
-
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -149,53 +148,6 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
-}
-
-function reseedByCumulativePoints(state) {
-  // Tally points for each player across all completed rounds
-  const pts = {};
-  state.players.forEach(p => { pts[p.id] = 0; });
-
-  state.rounds.forEach(round => {
-    round.courts?.forEach((c, ci) => {
-      const sc = round.scores?.[ci];
-      if (!sc || sc.t1 === undefined || sc.t2 === undefined) return;
-      c.team1.forEach(p => { if (p) pts[p.id] = (pts[p.id] || 0) + sc.t1; });
-      c.team2.forEach(p => { if (p) pts[p.id] = (pts[p.id] || 0) + sc.t2; });
-    });
-  });
-
-  // Sort all players by points descending
-  const sorted = [...state.players].sort((a, b) => (pts[b.id] || 0) - (pts[a.id] || 0));
-
-  // Split by gender for coed pairing
-  const females = sorted.filter(p => p.gender === 'F');
-  const males   = sorted.filter(p => p.gender === 'M');
-
-  // Interleave top female + top male into ranked pairs
-  const ordered = [];
-  const maxLen = Math.max(females.length, males.length);
-  for (let i = 0; i < maxLen; i++) {
-    if (i < females.length) ordered.push(females[i]);
-    if (i < males.length)   ordered.push(males[i]);
-  }
-  // Fill any remaining
-  sorted.forEach(p => { if (!ordered.find(o => o.id === p.id)) ordered.push(p); });
-
-  // Assign to courts — highest seeds get highest courts
-  const numCourts = state.rounds[0]?.courts.length || 8;
-  const courts = [];
-  for (let c = 0; c < numCourts; c++) {
-    // Reverse: court 1 = lowest seeds, court 8 = highest seeds
-    const courtNum = numCourts - c;
-    courts.push({
-      court: courtNum,
-      team1: [ordered[c*4] || null, ordered[c*4+1] || null],
-      team2: [ordered[c*4+2] || null, ordered[c*4+3] || null],
-    });
-  }
-  // Sort by court number ascending
-  return courts.sort((a, b) => a.court - b.court);
 }
 
 function advancePlayers(round) {
@@ -227,37 +179,36 @@ function advancePlayers(round) {
   return nextCourts;
 }
 
-const DEFAULT_ROSTER = [
-  { name: "Angel Munar",       gender: "F", id: 1  },
-  { name: "Bill Avant",        gender: "M", id: 2  },
-  { name: "Candice Chan",      gender: "F", id: 3  },
-  { name: "Desiree Myers",     gender: "F", id: 4  },
-  { name: "Eli Henry",         gender: "M", id: 5  },
-  { name: "Erick Li",          gender: "M", id: 6  },
-  { name: "Gia Boysen",        gender: "F", id: 7  },
-  { name: "Gina Henderson",    gender: "F", id: 8  },
-  { name: "Guy Chirinian",     gender: "M", id: 9  },
-  { name: "Ian Chan",          gender: "M", id: 10 },
-  { name: "Deep Chaniara",        gender: "M", id: 11 },
-  { name: "John Phandinh",     gender: "M", id: 12 },
-  { name: "John Henderson",    gender: "M", id: 13 },
-  { name: "Kai Pylkkanen",     gender: "M", id: 14 },
-  { name: "Joanne Moore",      gender: "F", id: 15 },
-  { name: "Gopi Dhanasekaran", gender: "M", id: 16 },
-  { name: "Lisa Greene",       gender: "F", id: 17 },
-  { name: "Marie Sam",         gender: "F", id: 18 },
-  { name: "Marko Vranich",     gender: "M", id: 19 },
-  { name: "Nanneke Dinklo",    gender: "F", id: 20 },
-  { name: "Phoebe Pylkkanen",  gender: "F", id: 21 },
-  { name: "Richard Hak",       gender: "M", id: 22 },
-  { name: "Rick Byrne",        gender: "M", id: 23 },
-  { name: "Ron Levin",         gender: "M", id: 24 },
-  { name: "Stuart Waldman",    gender: "M", id: 25 },
-  { name: "Tanya Deemer",      gender: "F", id: 26 },
-  { name: "Vicken Bedikian",   gender: "M", id: 27 },
-  { name: "Selene Jovel",      gender: "F", id: 28 },
-  { name: "Tina O'Brian",      gender: "F", id: 29 },
-  { name: "Lena Tjandra",      gender: "F", id: 30 },
-  { name: "Katelyn Martin",    gender: "F", id: 31 },
-  { name: "Lisa Mack",         gender: "F", id: 32 },
-];
+function reseedByCumulativePoints(state) {
+  const pts = {};
+  state.players.forEach(p => { pts[p.id] = 0; });
+  state.rounds.forEach(round => {
+    round.courts?.forEach((c, ci) => {
+      const sc = round.scores?.[ci];
+      if (!sc || sc.t1 === undefined || sc.t2 === undefined) return;
+      c.team1.forEach(p => { if (p) pts[p.id] = (pts[p.id] || 0) + sc.t1; });
+      c.team2.forEach(p => { if (p) pts[p.id] = (pts[p.id] || 0) + sc.t2; });
+    });
+  });
+  const sorted = [...state.players].sort((a, b) => (pts[b.id] || 0) - (pts[a.id] || 0));
+  const females = sorted.filter(p => p.gender === 'F');
+  const males   = sorted.filter(p => p.gender === 'M');
+  const ordered = [];
+  const maxLen = Math.max(females.length, males.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < females.length) ordered.push(females[i]);
+    if (i < males.length)   ordered.push(males[i]);
+  }
+  sorted.forEach(p => { if (!ordered.find(o => o.id === p.id)) ordered.push(p); });
+  const numCourts = state.rounds[0]?.courts.length || 8;
+  const courts = [];
+  for (let c = 0; c < numCourts; c++) {
+    const courtNum = numCourts - c;
+    courts.push({
+      court: courtNum,
+      team1: [ordered[c*4] || null, ordered[c*4+1] || null],
+      team2: [ordered[c*4+2] || null, ordered[c*4+3] || null],
+    });
+  }
+  return courts.sort((a, b) => a.court - b.court);
+}
