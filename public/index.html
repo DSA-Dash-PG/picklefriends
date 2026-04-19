@@ -320,7 +320,18 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
         <span style="font-size:.72rem;font-weight:600;color:var(--muted)">Tap to unlock</span>
       </div>
       <div id="courtCards"></div>
-      <div class="card" style="margin-top:12px">
+
+      <!-- Admin override tools -->
+      <div class="card" style="margin-top:12px;border-color:#ffe082">
+        <div class="card-title" style="color:#f57f17">⚙️ Admin Overrides</div>
+        <div class="flex-gap">
+          <button class="btn btn-sm" style="background:#fff8e1;color:#7d5a00;border:1px solid #ffe082;flex:1" onclick="openMoveModal()">🔀 Move Player</button>
+          <button class="btn btn-sm" style="background:#fff8e1;color:#7d5a00;border:1px solid #ffe082;flex:1" onclick="openReshuffleConfirm()">🎲 Re-shuffle Round</button>
+        </div>
+        <div class="text-muted text-sm mt-8">Tap any court's ✏️ button above to edit its pairings directly.</div>
+      </div>
+
+      <div class="card" style="margin-top:8px">
         <div class="flex-gap">
           <button class="btn btn-ghost" style="flex:1" onclick="prevRound()">← Prev Round</button>
           <button class="btn btn-green" style="flex:1" id="nextRoundBtn" onclick="nextRound()">Next Round →</button>
@@ -443,6 +454,45 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
     <div class="flex-gap mt-12">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal()">Cancel</button>
       <button class="btn btn-green" style="flex:1" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT COURT / PAIRING MODAL -->
+<div class="modal-overlay" id="courtEditModal">
+  <div class="modal">
+    <div class="modal-title">🏟 Edit Court <span id="courtEditNum"></span></div>
+    <div class="alert alert-warn" style="font-size:.78rem">Changes apply to the current round only.</div>
+
+    <div id="courtEditSlots"></div>
+
+    <div class="flex-gap mt-12">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeCourtModal()">Cancel</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveCourtEdit()">✅ Save Court</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOVE PLAYER MODAL -->
+<div class="modal-overlay" id="moveModal">
+  <div class="modal">
+    <div class="modal-title">🔀 Move Player to Different Court</div>
+    <div style="margin-bottom:10px">
+      <label>Player</label>
+      <select id="movePlayerSel" style="margin-bottom:10px"></select>
+      <label>Move to Court</label>
+      <select id="moveCourtSel"></select>
+      <label style="margin-top:10px">Place as</label>
+      <select id="moveSlotSel">
+        <option value="t1p1">Team A — Player 1</option>
+        <option value="t1p2">Team A — Player 2</option>
+        <option value="t2p1">Team B — Player 1</option>
+        <option value="t2p2">Team B — Player 2</option>
+      </select>
+    </div>
+    <div class="flex-gap mt-12">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeMoveModal()">Cancel</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveMovePlayer()">Move Player</button>
     </div>
   </div>
 </div>
@@ -836,7 +886,7 @@ function renderTourney() {
           <div class="court-icon">${c.court}</div>
           Court ${c.court}
           ${c.court === 8 ? '<span class="pill pill-yellow" style="margin-left:auto">🏆 Top Court</span>' : ''}
-          <span style="margin-left:auto">${savedBadge}</span>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openCourtEdit(${ci})">✏️ Edit</button>
         </div>
         <div class="teams-row">
           <div class="team-box">
@@ -1151,6 +1201,137 @@ function renderStats() {
   } else {
     podiumEl.innerHTML = '<div class="empty-state"><span class="icon">🥇</span>Complete rounds to see standings.</div>';
   }
+}
+
+// ════════════════════════════════════════════
+// ADMIN OVERRIDES — edit courts, move players, reshuffle
+// ════════════════════════════════════════════
+let editingCourtIdx = null;
+
+function openCourtEdit(courtIdx) {
+  const round = state.rounds[state.currentRound];
+  const court = round.courts[courtIdx];
+  editingCourtIdx = courtIdx;
+  document.getElementById('courtEditNum').textContent = court.court;
+
+  const allNames = state.players.map((p,i) => `<option value="${i}">${p.name} (${p.gender})</option>`).join('');
+  const nobody = `<option value="-1">— Empty —</option>`;
+
+  function slotSelect(label, currentPlayer, selectId) {
+    const currentIdx = currentPlayer ? state.players.findIndex(p => p.id === currentPlayer.id) : -1;
+    return `
+      <div style="margin-bottom:10px">
+        <label>${label}</label>
+        <select id="${selectId}">
+          ${nobody}
+          ${state.players.map((p,i) => `<option value="${i}" ${i===currentIdx?'selected':''}>${p.name} (${p.gender})</option>`).join('')}
+        </select>
+      </div>`;
+  }
+
+  document.getElementById('courtEditSlots').innerHTML = `
+    <div style="background:var(--green-pale);border-radius:9px;padding:10px;margin-bottom:10px">
+      <div style="font-weight:800;color:var(--green);margin-bottom:6px">🟢 Team A</div>
+      ${slotSelect('Player 1', court.team1[0], 'ce_t1p1')}
+      ${slotSelect('Player 2', court.team1[1], 'ce_t1p2')}
+    </div>
+    <div style="background:#e3f2fd;border-radius:9px;padding:10px">
+      <div style="font-weight:800;color:var(--blue);margin-bottom:6px">🔵 Team B</div>
+      ${slotSelect('Player 1', court.team2[0], 'ce_t2p1')}
+      ${slotSelect('Player 2', court.team2[1], 'ce_t2p2')}
+    </div>`;
+
+  document.getElementById('courtEditModal').classList.add('open');
+}
+
+function closeCourtModal() {
+  document.getElementById('courtEditModal').classList.remove('open');
+  editingCourtIdx = null;
+}
+
+async function saveCourtEdit() {
+  const round = state.rounds[state.currentRound];
+  const getPlayer = (selId) => {
+    const idx = parseInt(document.getElementById(selId).value);
+    return idx >= 0 ? state.players[idx] : null;
+  };
+  round.courts[editingCourtIdx].team1 = [getPlayer('ce_t1p1'), getPlayer('ce_t1p2')];
+  round.courts[editingCourtIdx].team2 = [getPlayer('ce_t2p1'), getPlayer('ce_t2p2')];
+  closeCourtModal();
+  const res = await apiPost('save', state);
+  if (res) localLastUpdated = Date.now();
+  renderTourney();
+}
+
+// Move player to a different court slot
+function openMoveModal() {
+  const round = state.rounds[state.currentRound];
+  if (!round) return alert('No active round.');
+
+  document.getElementById('movePlayerSel').innerHTML =
+    state.players.map((p,i) => `<option value="${i}">${p.name}</option>`).join('');
+
+  document.getElementById('moveCourtSel').innerHTML =
+    round.courts.map((c,ci) => `<option value="${ci}">Court ${c.court}</option>`).join('');
+
+  document.getElementById('moveModal').classList.add('open');
+}
+
+function closeMoveModal() {
+  document.getElementById('moveModal').classList.remove('open');
+}
+
+async function saveMovePlayer() {
+  const round = state.rounds[state.currentRound];
+  const playerIdx = parseInt(document.getElementById('movePlayerSel').value);
+  const courtIdx  = parseInt(document.getElementById('moveCourtSel').value);
+  const slot      = document.getElementById('moveSlotSel').value;
+  const player    = state.players[playerIdx];
+
+  // Remove player from wherever they currently are
+  round.courts.forEach(c => {
+    c.team1 = c.team1.map(p => p?.id === player.id ? null : p);
+    c.team2 = c.team2.map(p => p?.id === player.id ? null : p);
+  });
+
+  // Place in new slot
+  const [team, pos] = slot === 't1p1' ? ['team1',0] : slot === 't1p2' ? ['team1',1] :
+                      slot === 't2p1' ? ['team2',0] : ['team2',1];
+  // Bump whoever was there out to null
+  round.courts[courtIdx][team][pos] = player;
+
+  closeMoveModal();
+  const res = await apiPost('save', state);
+  if (res) localLastUpdated = Date.now();
+  renderTourney();
+}
+
+// Re-shuffle current round pairings
+async function openReshuffleConfirm() {
+  if (!confirm('Re-shuffle all court pairings for this round? Scores will be cleared for this round.')) return;
+  const round = state.rounds[state.currentRound];
+  // Collect all players in this round
+  const allPlayers = [];
+  round.courts.forEach(c => {
+    [...c.team1, ...c.team2].forEach(p => { if (p) allPlayers.push(p); });
+  });
+  const numCourts = round.courts.length;
+  const females = shuffle(allPlayers.filter(p => p.gender === 'F'));
+  const males   = shuffle(allPlayers.filter(p => p.gender === 'M'));
+  const ordered = [];
+  const maxLen = Math.max(females.length, males.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < females.length) ordered.push(females[i]);
+    if (i < males.length)   ordered.push(males[i]);
+  }
+  for (let c = 0; c < numCourts; c++) {
+    round.courts[c].team1 = [ordered[c*4]||null, ordered[c*4+1]||null];
+    round.courts[c].team2 = [ordered[c*4+2]||null, ordered[c*4+3]||null];
+  }
+  round.scores = {}; // clear scores for reshuffled round
+  const res = await apiPost('save', state);
+  if (res) localLastUpdated = Date.now();
+  renderTourney();
 }
 
 // ════════════════════════════════════════════
