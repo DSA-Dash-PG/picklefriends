@@ -2,6 +2,7 @@
 import { getStore } from "@netlify/blobs";
 
 const ADMIN_PIN = process.env.ADMIN_PIN || "2626";
+const VALID_TOURNEYS = ["live", "test", "practice"];
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,10 @@ export default async function handler(req) {
 
   const url = new URL(req.url);
   const action = url.searchParams.get("action") || "state";
+  const tourney = url.searchParams.get("tourney") || "live";
+
+  // Validate tourney key to prevent arbitrary blob keys
+  const storeKey = VALID_TOURNEYS.includes(tourney) ? `tournament-${tourney}` : "tournament-live";
 
   let store;
   try {
@@ -34,7 +39,7 @@ export default async function handler(req) {
   // GET — public
   if (req.method === "GET") {
     try {
-      const raw = await store.get("tournament", { type: "json" });
+      const raw = await store.get(storeKey, { type: "json" });
       return respond(raw || getDefaultState());
     } catch (e) {
       return respond(getDefaultState());
@@ -59,7 +64,7 @@ export default async function handler(req) {
     if (action === "save") {
       try {
         body.lastUpdated = Date.now();
-        await store.set("tournament", JSON.stringify(body));
+        await store.set(storeKey, JSON.stringify(body));
         return respond({ ok: true, lastUpdated: body.lastUpdated });
       } catch (e) {
         return respond({ error: "Save failed: " + e.message }, 500);
@@ -68,13 +73,13 @@ export default async function handler(req) {
 
     if (action === "score") {
       try {
-        let current = await store.get("tournament", { type: "json" }) || getDefaultState();
+        let current = await store.get(storeKey, { type: "json" }) || getDefaultState();
         const { roundIndex, courtIndex, t1, t2 } = body;
         if (!current.rounds[roundIndex]) return respond({ error: "Round not found" }, 400);
         if (!current.rounds[roundIndex].scores) current.rounds[roundIndex].scores = {};
         current.rounds[roundIndex].scores[courtIndex] = { t1: Number(t1), t2: Number(t2), ts: Date.now() };
         current.lastUpdated = Date.now();
-        await store.set("tournament", JSON.stringify(current));
+        await store.set(storeKey, JSON.stringify(current));
         return respond({ ok: true, state: current });
       } catch (e) {
         return respond({ error: "Score failed: " + e.message }, 500);
@@ -83,22 +88,36 @@ export default async function handler(req) {
 
     if (action === "advance") {
       try {
-        let current = await store.get("tournament", { type: "json" }) || getDefaultState();
+        let current = await store.get(storeKey, { type: "json" }) || getDefaultState();
         const nextCourts = advancePlayers(current.rounds[current.currentRound]);
         current.currentRound++;
         current.rounds[current.currentRound] = { courts: nextCourts, scores: {} };
         current.lastUpdated = Date.now();
-        await store.set("tournament", JSON.stringify(current));
+        await store.set(storeKey, JSON.stringify(current));
         return respond({ ok: true, state: current });
       } catch (e) {
         return respond({ error: "Advance failed: " + e.message }, 500);
       }
     }
 
+    if (action === "reseed") {
+      try {
+        let current = await store.get(storeKey, { type: "json" }) || getDefaultState();
+        const nextCourts = reseedByCumulativePoints(current);
+        current.currentRound++;
+        current.rounds[current.currentRound] = { courts: nextCourts, scores: {} };
+        current.lastUpdated = Date.now();
+        await store.set(storeKey, JSON.stringify(current));
+        return respond({ ok: true, state: current });
+      } catch (e) {
+        return respond({ error: "Reseed failed: " + e.message }, 500);
+      }
+    }
+
     if (action === "reset") {
       try {
         const fresh = getDefaultState();
-        await store.set("tournament", JSON.stringify(fresh));
+        await store.set(storeKey, JSON.stringify(fresh));
         return respond({ ok: true, state: fresh });
       } catch (e) {
         return respond({ error: "Reset failed: " + e.message }, 500);
@@ -130,6 +149,53 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+function reseedByCumulativePoints(state) {
+  // Tally points for each player across all completed rounds
+  const pts = {};
+  state.players.forEach(p => { pts[p.id] = 0; });
+
+  state.rounds.forEach(round => {
+    round.courts?.forEach((c, ci) => {
+      const sc = round.scores?.[ci];
+      if (!sc || sc.t1 === undefined || sc.t2 === undefined) return;
+      c.team1.forEach(p => { if (p) pts[p.id] = (pts[p.id] || 0) + sc.t1; });
+      c.team2.forEach(p => { if (p) pts[p.id] = (pts[p.id] || 0) + sc.t2; });
+    });
+  });
+
+  // Sort all players by points descending
+  const sorted = [...state.players].sort((a, b) => (pts[b.id] || 0) - (pts[a.id] || 0));
+
+  // Split by gender for coed pairing
+  const females = sorted.filter(p => p.gender === 'F');
+  const males   = sorted.filter(p => p.gender === 'M');
+
+  // Interleave top female + top male into ranked pairs
+  const ordered = [];
+  const maxLen = Math.max(females.length, males.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < females.length) ordered.push(females[i]);
+    if (i < males.length)   ordered.push(males[i]);
+  }
+  // Fill any remaining
+  sorted.forEach(p => { if (!ordered.find(o => o.id === p.id)) ordered.push(p); });
+
+  // Assign to courts — highest seeds get highest courts
+  const numCourts = state.rounds[0]?.courts.length || 8;
+  const courts = [];
+  for (let c = 0; c < numCourts; c++) {
+    // Reverse: court 1 = lowest seeds, court 8 = highest seeds
+    const courtNum = numCourts - c;
+    courts.push({
+      court: courtNum,
+      team1: [ordered[c*4] || null, ordered[c*4+1] || null],
+      team2: [ordered[c*4+2] || null, ordered[c*4+3] || null],
+    });
+  }
+  // Sort by court number ascending
+  return courts.sort((a, b) => a.court - b.court);
 }
 
 function advancePlayers(round) {
@@ -172,11 +238,11 @@ const DEFAULT_ROSTER = [
   { name: "Gina Henderson",    gender: "F", id: 8  },
   { name: "Guy Chirinian",     gender: "M", id: 9  },
   { name: "Ian Chan",          gender: "M", id: 10 },
-  { name: "Deep Moore",        gender: "M", id: 11 },
+  { name: "Deep Chaniara",        gender: "M", id: 11 },
   { name: "John Phandinh",     gender: "M", id: 12 },
   { name: "John Henderson",    gender: "M", id: 13 },
   { name: "Kai Pylkkanen",     gender: "M", id: 14 },
-  { name: "Joanne Boyle",      gender: "F", id: 15 },
+  { name: "Joanne Moore",      gender: "F", id: 15 },
   { name: "Gopi Dhanasekaran", gender: "M", id: 16 },
   { name: "Lisa Greene",       gender: "F", id: 17 },
   { name: "Marie Sam",         gender: "F", id: 18 },
