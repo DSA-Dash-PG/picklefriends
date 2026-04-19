@@ -1274,8 +1274,6 @@ function renderPDFMap(round) {
   const arr3 = arrow(right(C3), cy(C3)+10, left(C4)-4, cy(C4)+10, gold, 3);
   // Court 4 → Court 5 (crosses locations, bottom row)
   const arr4 = arrow(right(C4), cy(C4)+10, left(C5)-4, cy(C5)+10, gold, 3);
-  // Court 5 → Court 8 (left column loc2, bottom to top)
-  const arr5 = arrow(cx(C5)-8, top(C5)-4, cx(C8)-8, bot(C8)+4, gold, 3);
   // Court 5 → Court 6 (bottom row loc2, left to right)
   const arr6 = arrow(right(C5), cy(C5)-10, left(C6)-4, cy(C6)-10, gold, 3);
   // Court 6 → Court 7 (right column loc2, bottom to top)
@@ -1327,7 +1325,7 @@ function renderPDFMap(round) {
     ${court(C6, 6, 'Court 6')}
 
     <!-- Movement arrows (gold = ladder path) -->
-    ${arr1}${arr2}${arr3}${arr4}${arr5}${arr6}${arr7}${arr8}
+    ${arr1}${arr2}${arr3}${arr4}${arr6}${arr7}${arr8}
 
     <!-- Legend -->
     <g transform="translate(12,${H-22})">
