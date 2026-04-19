@@ -1162,152 +1162,186 @@ function renderMap() {
 }
 
 function renderPDFMap(round) {
-  // PDF layout: two locations side by side
-  // Location 1 (left):  Courts 1-4  arranged in H-pattern
-  // Location 2 (right): Courts 5-8  arranged in H-pattern
-  // Courts 1=bottom-right, 2=top-left, 3=bottom-left, 4=bottom-right (of loc1)
-  // Courts 5=bottom-right, 6=bottom-right, 7=top-right, 8=top-left (of loc2)
-  // Numbering per PDF: loc1 top-left=2, top-right=1, bottom-left=3, bottom-right=4
-  //                    loc2 top-left=8, top-right=7, bottom-left=5, bottom-right=6
-
   const courts = round?.courts || [];
   const scores = round?.scores || {};
 
   function getCourtInfo(courtNum) {
     const c = courts.find(x => x.court === courtNum);
-    if (!c) return { players: '', score: '', winner: '', hasScore: false };
+    if (!c) return { score: '', hasScore: false, winner: '' };
     const ci = courts.indexOf(c);
     const sc = scores[ci] || {};
     const hasScore = sc.t1 !== undefined && sc.t2 !== undefined;
     const winner = hasScore ? (sc.t1 > sc.t2 ? 'A' : sc.t2 > sc.t1 ? 'B' : 'T') : '';
-    const p1 = c.team1.map(p => p?.name?.split(' ')[0] || '?').join('/');
-    const p2 = c.team2.map(p => p?.name?.split(' ')[0] || '?').join('/');
-    return { players: `${p1} vs ${p2}`, score: hasScore ? `${sc.t1}–${sc.t2}` : '', winner, hasScore, c };
+    const names = [...c.team1, ...c.team2].filter(Boolean).map(p => p.name.split(' ')[0]).join(', ');
+    return { score: hasScore ? `${sc.t1}–${sc.t2}` : '', hasScore, winner, names };
   }
 
-  // Colors
-  const teal = '#1a9b8a';
-  const tealDark = '#147a6c';
-  const courtBg = '#2cb5a0';
-  const courtLine = '#1a8070';
-  const red = '#e63946';
+  // SVG canvas
+  const W = 500, H = 340;
+
+  // Location boxes
+  const L1 = { x: 12, y: 30, w: 200, h: 270 };
+  const L2 = { x: 288, y: 30, w: 200, h: 270 };
+
+  // Court dimensions
+  const CW = 74, CH = 90;
+
+  // Court positions — matching PDF exactly
+  // Loc1: Court2=top-left, Court1=top-right, Court3=bottom-left, Court4=bottom-right
+  const C2 = { x: L1.x+12, y: L1.y+35 };
+  const C1 = { x: L1.x+L1.w-CW-12, y: L1.y+35 };
+  const C3 = { x: L1.x+12, y: L1.y+L1.h-CH-12 };
+  const C4 = { x: L1.x+L1.w-CW-12, y: L1.y+L1.h-CH-12 };
+
+  // Loc2: Court8=top-left, Court7=top-right, Court5=bottom-left, Court6=bottom-right
+  const C8 = { x: L2.x+12, y: L2.y+35 };
+  const C7 = { x: L2.x+L2.w-CW-12, y: L2.y+35 };
+  const C5 = { x: L2.x+12, y: L2.y+L2.h-CH-12 };
+  const C6 = { x: L2.x+L2.w-CW-12, y: L2.y+L2.h-CH-12 };
+
+  const teal = '#1e9e8a';
+  const tealDark = '#0d6b5c';
+  const courtFill = '#28b5a0';
   const gold = '#f4c430';
   const white = '#ffffff';
 
-  function courtBox(x, y, w, h, courtNum, label) {
-    const info = getCourtInfo(courtNum);
-    const isTop = courtNum === (courts.length || 8);
-    const fill = isTop ? '#1a4a2e' : courtBg;
-    const border = isTop ? gold : courtLine;
-    const titleColor = isTop ? gold : white;
-    const scoreColor = info.hasScore ? '#90ee90' : '#aaa';
+  // Court box renderer
+  function court(pos, num, label) {
+    const info = getCourtInfo(num);
+    const isTop = num === 8;
+    const bg = isTop ? '#1a4a2e' : courtFill;
+    const borderColor = isTop ? gold : '#15806e';
+    const bw = isTop ? 2.5 : 1.5;
 
-    return `
-      <g>
-        <!-- Court surface -->
-        <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${fill}" stroke="${border}" stroke-width="${isTop?2:1}"/>
-        <!-- Court lines -->
-        <rect x="${x+4}" y="${y+4}" width="${w-8}" height="${h-8}" rx="2" fill="none" stroke="${white}" stroke-width="0.5" opacity="0.3"/>
-        <line x1="${x+w/2}" y1="${y+4}" x2="${x+w/2}" y2="${y+h-4}" stroke="${white}" stroke-width="0.5" opacity="0.3"/>
-        <line x1="${x+4}" y1="${y+h/2}" x2="${x+w-4}" y2="${y+h/2}" stroke="${white}" stroke-width="0.5" opacity="0.3"/>
-        <!-- Net line -->
-        <line x1="${x+8}" y1="${y+h/2}" x2="${x+w-8}" y2="${y+h/2}" stroke="${white}" stroke-width="1.5" opacity="0.6"/>
-        <!-- Court number badge -->
-        <rect x="${x+2}" y="${y+2}" width="22" height="14" rx="3" fill="${isTop?gold:tealDark}" opacity="0.9"/>
-        <text x="${x+13}" y="${y+12}" font-family="Fredoka One,cursive" font-size="9" fill="${isTop?tealDark:white}" text-anchor="middle">${label}</text>
-        <!-- Score -->
-        ${info.hasScore ? `<rect x="${x+w-28}" y="${y+2}" width="26" height="14" rx="3" fill="rgba(0,0,0,0.4)"/>
-        <text x="${x+w-15}" y="${y+12}" font-family="Fredoka One,cursive" font-size="8" fill="${scoreColor}" text-anchor="middle">${info.score}</text>` : ''}
-        ${isTop ? `<text x="${x+w/2}" y="${y+h-5}" font-family="Fredoka One,cursive" font-size="7" fill="${gold}" text-anchor="middle">🏆 TOP</text>` : ''}
-      </g>`;
+    return `<g>
+      <rect x="${pos.x}" y="${pos.y}" width="${CW}" height="${CH}" rx="5"
+        fill="${bg}" stroke="${borderColor}" stroke-width="${bw}"/>
+      <!-- inner court lines -->
+      <rect x="${pos.x+5}" y="${pos.y+5}" width="${CW-10}" height="${CH-10}"
+        fill="none" stroke="${white}" stroke-width="0.5" opacity="0.25" rx="2"/>
+      <line x1="${pos.x+5}" y1="${pos.y+CH/2}" x2="${pos.x+CW-5}" y2="${pos.y+CH/2}"
+        stroke="${white}" stroke-width="1" opacity="0.4"/>
+      <!-- label -->
+      <rect x="${pos.x+4}" y="${pos.y+4}" width="${CW-8}" height="18" rx="3"
+        fill="${isTop ? gold : tealDark}" opacity="0.9"/>
+      <text x="${pos.x+CW/2}" y="${pos.y+16}"
+        font-family="Fredoka One,cursive" font-size="10.5"
+        fill="${isTop ? tealDark : white}" text-anchor="middle" font-weight="bold">
+        ${label}${isTop ? ' 🏆' : ''}
+      </text>
+      <!-- score -->
+      ${info.hasScore ? `
+        <rect x="${pos.x+4}" y="${pos.y+CH-20}" width="${CW-8}" height="15" rx="3" fill="rgba(0,0,0,0.45)"/>
+        <text x="${pos.x+CW/2}" y="${pos.y+CH-9}"
+          font-family="Fredoka One,cursive" font-size="9"
+          fill="${info.winner==='T'?'#aaa':'#90ee90'}" text-anchor="middle">${info.score}</text>` : ''}
+      <!-- player names -->
+      ${info.names ? `<text x="${pos.x+CW/2}" y="${pos.y+CH/2+8}"
+        font-family="Nunito,sans-serif" font-size="6.5" fill="${white}"
+        text-anchor="middle" opacity="0.75">${info.names.substring(0,22)}</text>` : ''}
+    </g>`;
   }
 
-  function arrow(x1, y1, x2, y2, label='') {
+  // Arrow helper — clean with arrowhead
+  function arrow(x1, y1, x2, y2, color='#f4c430', thick=3) {
     const dx = x2-x1, dy = y2-y1;
     const len = Math.sqrt(dx*dx+dy*dy);
+    if (len < 1) return '';
     const ux = dx/len, uy = dy/len;
-    const ax = x2-ux*8, ay = y2-uy*8;
+    const hx = x2-ux*10, hy = y2-uy*10;
     const px = -uy*5, py = ux*5;
     return `
-      <line x1="${x1}" y1="${y1}" x2="${ax}" y2="${ay}" stroke="${red}" stroke-width="3" stroke-linecap="round"/>
-      <polygon points="${x2},${y2} ${ax+px},${ay+py} ${ax-px},${ay-py}" fill="${red}"/>
-      ${label ? `<text x="${(x1+x2)/2+6}" y="${(y1+y2)/2}" font-family="Nunito,sans-serif" font-size="7" fill="${red}" font-weight="700">${label}</text>` : ''}`;
+      <line x1="${x1}" y1="${y1}" x2="${hx}" y2="${hy}"
+        stroke="${color}" stroke-width="${thick}" stroke-linecap="round" opacity="0.95"/>
+      <polygon points="${x2},${y2} ${hx+px},${hy+py} ${hx-px},${hy-py}"
+        fill="${color}" opacity="0.95"/>`;
   }
 
-  // SVG dimensions — two locations side by side
-  const W = 380, H = 280;
-  // Location boxes
-  const L1x = 10, L1y = 20, L1w = 160, L1h = 240;
-  const L2x = 210, L2y = 20, L2w = 160, L2h = 240;
-  // Court positions within each location (H-pattern: 2 top, 2 bottom)
-  const cw = 62, ch = 80, gap = 8;
-  // Loc1: courts 1(top-right), 2(top-left), 3(bottom-left), 4(bottom-right)
-  const l1_tl = { x: L1x+gap, y: L1y+gap+20 };           // Court 2
-  const l1_tr = { x: L1x+L1w-cw-gap, y: L1y+gap+20 };    // Court 1
-  const l1_bl = { x: L1x+gap, y: L1y+L1h-ch-gap };        // Court 3
-  const l1_br = { x: L1x+L1w-cw-gap, y: L1y+L1h-ch-gap };// Court 4
-  // Loc2: courts 8(top-left), 7(top-right), 5(bottom-left), 6(bottom-right)
-  const l2_tl = { x: L2x+gap, y: L2y+gap+20 };            // Court 8
-  const l2_tr = { x: L2x+L2w-cw-gap, y: L2y+gap+20 };     // Court 7
-  const l2_bl = { x: L2x+gap, y: L2y+L2h-ch-gap };         // Court 5
-  const l2_br = { x: L2x+L2w-cw-gap, y: L2y+L2h-ch-gap }; // Court 6
+  // Center X of a court
+  const cx = p => p.x + CW/2;
+  const cy = p => p.y + CH/2;
+  const bot = p => p.y + CH;
+  const top = p => p.y;
+  const right = p => p.x + CW;
+  const left = p => p.x;
 
-  // Center connectors (H crossbar)
-  const cx1 = L1x+L1w/2, cy = H/2;
-  const cx2 = L2x+L2w/2;
+  // ── Yellow arrows: the ladder movement path ──────────────────────────
+  // Court 1 → Court 2 (top row, right to left)
+  const arr1 = arrow(left(C1)+8, cy(C1), right(C2)+4, cy(C2), gold, 3);
+  // Court 2 → Court 3 (left column, top to bottom)
+  const arr2 = arrow(cx(C2), bot(C2), cx(C3), top(C3)-4, gold, 3);
+  // Court 3 → Court 4 (bottom row, left to right)
+  const arr3 = arrow(right(C3), cy(C3)+10, left(C4)-4, cy(C4)+10, gold, 3);
+  // Court 4 → Court 5 (crosses locations, bottom row)
+  const arr4 = arrow(right(C4), cy(C4)+10, left(C5)-4, cy(C5)+10, gold, 3);
+  // Court 5 → Court 8 (left column loc2, bottom to top)
+  const arr5 = arrow(cx(C5)-8, top(C5)-4, cx(C8)-8, bot(C8)+4, gold, 3);
+  // Court 5 → Court 6 (bottom row loc2, left to right)
+  const arr6 = arrow(right(C5), cy(C5)-10, left(C6)-4, cy(C6)-10, gold, 3);
+  // Court 6 → Court 7 (right column loc2, bottom to top)
+  const arr7 = arrow(cx(C6)+8, top(C6)-4, cx(C7)+8, bot(C7)+4, gold, 3);
+  // Court 7 → Court 8 (top row loc2, right to left)
+  const arr8 = arrow(left(C7)-4, cy(C7), right(C8)+4, cy(C8), gold, 3);
 
   return `
-  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:4px">
   <svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"
-    style="max-width:480px;display:block;margin:0 auto;border-radius:12px;background:linear-gradient(135deg,#0d3b2e,#1a5c47)">
+    style="max-width:520px;display:block;margin:0 auto;border-radius:14px;
+    background:linear-gradient(160deg,#0a2e24 0%,#0f3d2e 60%,#0a2a20 100%)">
 
-    <!-- Location 1 background -->
-    <rect x="${L1x}" y="${L1y}" width="${L1w}" height="${L1h}" rx="8" fill="${teal}" opacity="0.3" stroke="${teal}" stroke-width="1"/>
-    <text x="${L1x+L1w/2}" y="${L1y+14}" font-family="Fredoka One,cursive" font-size="9" fill="rgba(255,255,255,0.6)" text-anchor="middle">LOCATION 1 (Courts 1–4)</text>
+    <!-- Location 1 -->
+    <rect x="${L1.x}" y="${L1.y}" width="${L1.w}" height="${L1.h}"
+      rx="10" fill="${teal}" opacity="0.18" stroke="${teal}" stroke-width="1" opacity="0.4"/>
+    <text x="${L1.x+L1.w/2}" y="${L1.y+22}"
+      font-family="Fredoka One,cursive" font-size="11" fill="rgba(255,255,255,0.55)" text-anchor="middle">
+      LOCATION 1 (Courts 1–4)
+    </text>
 
-    <!-- Location 2 background -->
-    <rect x="${L2x}" y="${L2y}" width="${L2w}" height="${L2h}" rx="8" fill="${teal}" opacity="0.3" stroke="${teal}" stroke-width="1"/>
-    <text x="${L2x+L2w/2}" y="${L2y+14}" font-family="Fredoka One,cursive" font-size="9" fill="rgba(255,255,255,0.6)" text-anchor="middle">LOCATION 2 (Courts 5–8)</text>
+    <!-- Location 2 -->
+    <rect x="${L2.x}" y="${L2.y}" width="${L2.w}" height="${L2.h}"
+      rx="10" fill="${teal}" opacity="0.18" stroke="${teal}" stroke-width="1" opacity="0.4"/>
+    <text x="${L2.x+L2.w/2}" y="${L2.y+22}"
+      font-family="Fredoka One,cursive" font-size="11" fill="rgba(255,255,255,0.55)" text-anchor="middle">
+      LOCATION 2 (Courts 5–8)
+    </text>
 
-    <!-- H-pattern vertical connectors loc1 -->
-    <rect x="${L1x+L1w/2-3}" y="${l1_tl.y+ch}" width="6" height="${l1_bl.y-(l1_tl.y+ch)}" fill="${teal}" opacity="0.5"/>
-    <!-- H-pattern vertical connectors loc2 -->
-    <rect x="${L2x+L2w/2-3}" y="${l2_tl.y+ch}" width="6" height="${l2_bl.y-(l2_tl.y+ch)}" fill="${teal}" opacity="0.5"/>
-    <!-- H crossbar between locations -->
-    <rect x="${L1x+L1w}" y="${cy-3}" width="${L2x-(L1x+L1w)}" height="6" fill="${teal}" opacity="0.5"/>
+    <!-- H-pattern connectors -->
+    <!-- Loc1 vertical center bar -->
+    <rect x="${L1.x+L1.w/2-3}" y="${bot(C2)+2}" width="6" height="${top(C3)-bot(C2)-4}"
+      fill="${teal}" opacity="0.35" rx="3"/>
+    <!-- Loc2 vertical center bar -->
+    <rect x="${L2.x+L2.w/2-3}" y="${bot(C8)+2}" width="6" height="${top(C5)-bot(C8)-4}"
+      fill="${teal}" opacity="0.35" rx="3"/>
+    <!-- Horizontal bridge between locations -->
+    <rect x="${L1.x+L1.w}" y="${H/2-3}" width="${L2.x-L1.x-L1.w}" height="6"
+      fill="${teal}" opacity="0.35" rx="3"/>
 
-    <!-- Court boxes -->
-    ${courtBox(l1_tl.x, l1_tl.y, cw, ch, 2, 'Court 2')}
-    ${courtBox(l1_tr.x, l1_tr.y, cw, ch, 1, 'Court 1')}
-    ${courtBox(l1_bl.x, l1_bl.y, cw, ch, 3, 'Court 3')}
-    ${courtBox(l1_br.x, l1_br.y, cw, ch, 4, 'Court 4')}
+    <!-- Courts -->
+    ${court(C2, 2, 'Court 2')}
+    ${court(C1, 1, 'Court 1')}
+    ${court(C3, 3, 'Court 3')}
+    ${court(C4, 4, 'Court 4')}
+    ${court(C8, 8, 'Court 8')}
+    ${court(C7, 7, 'Court 7')}
+    ${court(C5, 5, 'Court 5')}
+    ${court(C6, 6, 'Court 6')}
 
-    ${courtBox(l2_tl.x, l2_tl.y, cw, ch, 8, 'Court 8')}
-    ${courtBox(l2_tr.x, l2_tr.y, cw, ch, 7, 'Court 7')}
-    ${courtBox(l2_bl.x, l2_bl.y, cw, ch, 5, 'Court 5')}
-    ${courtBox(l2_br.x, l2_br.y, cw, ch, 6, 'Court 6')}
-
-    <!-- Movement arrows (matching PDF pattern) -->
-    <!-- Loc1: top courts → down → crossbar → right -->
-    ${arrow(l1_tr.x+cw/2, l1_tr.y+ch, l1_br.x+cw/2, l1_br.y)}
-    ${arrow(l1_tl.x+cw/2, l1_tl.y+ch, l1_bl.x+cw/2, l1_bl.y)}
-    <!-- Loc1 bottom → crossbar center -->
-    ${arrow(l1_br.x+cw, l1_br.y+ch/2, L1x+L1w+5, cy)}
-    <!-- Crossbar → Loc2 -->
-    ${arrow(L2x-5, cy, l2_bl.x+cw/2, l2_bl.y+ch)}
-    ${arrow(L2x-5, cy, l2_br.x+cw/2, l2_br.y+ch)}
-    <!-- Loc2: bottom courts → up -->
-    ${arrow(l2_bl.x+cw/2, l2_bl.y, l2_tl.x+cw/2, l2_tl.y+ch)}
-    ${arrow(l2_br.x+cw/2, l2_br.y, l2_tr.x+cw/2, l2_tr.y+ch)}
+    <!-- Movement arrows (gold = ladder path) -->
+    ${arr1}${arr2}${arr3}${arr4}${arr5}${arr6}${arr7}${arr8}
 
     <!-- Legend -->
-    <rect x="10" y="${H-18}" width="8" height="8" rx="2" fill="${red}"/>
-    <text x="22" y="${H-11}" font-family="Nunito,sans-serif" font-size="8" fill="rgba(255,255,255,0.7)">Player movement direction</text>
-    <rect x="140" y="${H-18}" width="8" height="8" rx="2" fill="${gold}"/>
-    <text x="152" y="${H-11}" font-family="Nunito,sans-serif" font-size="8" fill="rgba(255,255,255,0.7)">🏆 Top court</text>
-
+    <g transform="translate(12,${H-22})">
+      <rect width="10" height="10" rx="2" fill="${gold}"/>
+      <text x="14" y="9" font-family="Nunito,sans-serif" font-size="8.5"
+        fill="rgba(255,255,255,0.65)" font-weight="700">Ladder movement path</text>
+      <rect x="160" width="10" height="10" rx="2" fill="${gold}" stroke="${gold}" stroke-width="1.5"/>
+      <rect x="160" y="1" width="10" height="8" rx="1" fill="#1a4a2e"/>
+      <text x="174" y="9" font-family="Nunito,sans-serif" font-size="8.5"
+        fill="rgba(255,255,255,0.65)" font-weight="700">🏆 Top court (Court 8)</text>
+    </g>
   </svg>
   </div>`;
+}
 }
 
 // ════════════════════════════════════════════
