@@ -843,7 +843,11 @@ function renderRoster() {
   // PUBLIC list — name + gender badge, no edit buttons
   const publicList = document.getElementById('playerList');
   if (!players.length) {
-    publicList.innerHTML = '<div class="empty-state"><span class="icon">🥒</span>No players yet.</div>';
+    publicList.innerHTML = `<div class="empty-state">
+      <span class="icon">🥒</span>
+      No players loaded yet.<br>
+      <span style="font-size:.78rem;color:var(--muted)">Admin: go to Roster tab → upload CSV or add players manually.</span>
+    </div>`;
   } else {
     publicList.innerHTML = players.map(p => `
       <div class="player-item">
@@ -1516,7 +1520,6 @@ async function init() {
   const data = await apiGet();
   if (data) { state = data; localLastUpdated = data.lastUpdated; }
   showSyncBar(false);
-  // Default landing page is Play tab
   showPageDirect('tourney');
   renderRoster();
   applyAdminState();
