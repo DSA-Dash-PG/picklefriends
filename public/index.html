@@ -214,7 +214,16 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
     <button class="tab"        id="tab-roster"  onclick="showPage('roster',event)">👥 Roster</button>
   </div>
 </div>
-<div class="admin-bar" id="adminBar">🔓 ADMIN MODE — <span style="cursor:pointer;text-decoration:underline" onclick="lockAdmin()">Lock</span></div>
+<div class="admin-bar" id="adminBar">
+  🔓 ADMIN MODE &nbsp;|&nbsp;
+  <select id="tourneySelect" onchange="switchTourney(this.value)"
+    style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:6px;padding:2px 6px;font-size:.72rem;font-family:'Nunito',sans-serif;font-weight:700">
+    <option value="live">🏆 Spring Bash (LIVE)</option>
+    <option value="test">🧪 Test Tournament</option>
+    <option value="practice">📋 Practice</option>
+  </select>
+  &nbsp;|&nbsp; <span style="cursor:pointer;text-decoration:underline" onclick="lockAdmin()">Lock</span>
+</div>
 <div class="sync-bar" id="syncBar">⏳ Syncing with server...</div>
 
 <!-- ══════════ ROSTER PAGE ══════════ -->
@@ -437,20 +446,52 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
       <div class="flex-between" style="padding:5px 0"><span class="text-muted">⏰ Duration</span><strong>~2 hours</strong></div>
     </div>
   </div>
+
   <div class="card">
-    <div class="card-title">⚖️ Scoring</div>
-    <div style="font-size:.86rem;line-height:1.8">
-      <p>• Play 12 min regardless of score</p>
-      <p>• Warning at minute 11</p>
-      <p>• When horn sounds, finish the ball in play</p>
+    <div class="card-title">⏱ Each Round</div>
+    <div style="font-size:.86rem;line-height:1.9">
+      <p>• Players decide themselves who serves first</p>
+      <p>• Play <strong>12 minutes regardless of score</strong></p>
+      <p>• You will receive a <strong>warning at minute 11</strong></p>
+      <p>• When the 12-minute signal sounds, <strong>finish the ball in progress</strong></p>
       <p>• <strong>If tied when horn blows: do NOT count the final point</strong></p>
-      <p>• Receiving team makes line calls</p>
     </div>
   </div>
+
+  <div class="card">
+    <div class="card-title">🪜 After Each Round</div>
+    <div style="font-size:.86rem;line-height:1.9">
+      <p>⬆️ <strong>Winners</strong> move up one court (Court 8 stays)</p>
+      <p>⬇️ <strong>Non-winners</strong> move down one court (Court 1 stays)</p>
+      <p>🔀 When partners move, they <strong>split and play with new partners</strong></p>
+      <p>🟢 <strong>Coed teams are preferred</strong> over the split requirement</p>
+    </div>
+    <div class="alert alert-warn mt-8">
+      ⭐ <strong>Game 5 exception:</strong> Courts are assigned based on cumulative points from Rounds 1–4. Everyone re-seeds!
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🥇 How to Win</div>
+    <div style="font-size:.86rem;line-height:2">
+      <p>🥇 <strong>1st:</strong> Winners of Court 8 in the final round</p>
+      <p>🥈 <strong>2nd:</strong> Non-winners of Court 8 in the final round</p>
+      <p>🥉 <strong>3rd:</strong> Winners of Court 7 in the final round</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📐 Basic Rules</div>
+    <div style="font-size:.86rem;line-height:1.9">
+      <p>• Receiving team makes the line calls</p>
+      <p>• May opt for input from opponents or a <strong>do-over</strong></p>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">🪆 Gnome Facts</div>
-    <div class="alert alert-warn">🍄 Ball dribbles over net and hits base = <strong>do-over!</strong></div>
-    <div class="alert alert-info">🚻 Bathroom break? Raise your hand — a proxy will sub in. Hurry back!</div>
+    <div class="alert alert-warn">🍄 Ball dribbles over the net and hits the base = <strong>do-over!</strong></div>
+    <div class="alert alert-info">🚻 Bathroom break? Raise your hand — a proxy (with far less talent) will play in your absence. Hurry back… no pressure!</div>
   </div>
 </div>
 
@@ -543,6 +584,27 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
 const ADMIN_PIN = '2626'; // must match ADMIN_PIN in Netlify env vars
 const POLL_INTERVAL = 5000; // ms between server polls
 
+// Active tournament key — changes when admin switches tourneys
+let activeTourney = 'live'; // default = live tournament
+
+function switchTourney(key) {
+  if (!isAdmin) return;
+  if (key === activeTourney) return;
+  if (!confirm(`Switch to "${key}" tournament? Current view will reload.`)) {
+    document.getElementById('tourneySelect').value = activeTourney;
+    return;
+  }
+  activeTourney = key;
+  localLastUpdated = 0;
+  state = { players: [], rounds: [], currentRound: 0, tourneyStarted: false, lastUpdated: 0 };
+  // Show a banner so everyone knows which tourney is active
+  document.getElementById('headerStatus').innerHTML =
+    activeTourney === 'live'
+      ? `<span class="live-dot"></span>Live • 8 Courts • 32 Players • 8 Rounds`
+      : `<span style="color:#ffe082;font-weight:800">[${activeTourney.toUpperCase()}]</span> Test mode — not the live tournament`;
+  init();
+}
+
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
@@ -564,7 +626,7 @@ let pollTimer = null;
 // ════════════════════════════════════════════
 async function apiGet() {
   try {
-    const r = await fetch('/api?action=state');
+    const r = await fetch(`/api?action=state&tourney=${activeTourney}`);
     if (!r.ok) throw new Error('Server error');
     return await r.json();
   } catch(e) {
@@ -576,7 +638,7 @@ async function apiGet() {
 async function apiPost(action, body) {
   try {
     showSyncBar(true);
-    const r = await fetch('/api?action=' + action, {
+    const r = await fetch(`/api?action=${action}&tourney=${activeTourney}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-pin': ADMIN_PIN },
       body: JSON.stringify(body)
@@ -978,12 +1040,22 @@ async function nextRound() {
 
   if (state.currentRound >= 7) { finishTourney(); return; }
 
+  // Round 4 → 5 transition: re-seed by cumulative points
+  const nextRoundIdx = state.currentRound + 1;
+  if (nextRoundIdx === 4) { // 0-indexed, so index 4 = Round 5
+    const res = await apiPost('reseed', {});
+    if (res?.state) { state = res.state; localLastUpdated = Date.now(); }
+    resetGameState();
+    renderTourney();
+    // Show re-seed notice
+    setTimeout(() => alert('⭐ Round 5 — Courts re-assigned by cumulative points! Check the new assignments.'), 300);
+    return;
+  }
+
   const res = await apiPost('advance', {});
   if (res?.state) { state = res.state; localLastUpdated = Date.now(); }
   resetGameState();
   renderTourney();
-  if (document.getElementById('page-map').classList.contains('active')) renderMap();
-  window.scrollTo(0,0);
 }
 
 function prevRound() {
@@ -991,7 +1063,6 @@ function prevRound() {
     state.currentRound--;
     apiPost('save', state);
     renderTourney();
-    window.scrollTo(0,0);
   }
 }
 
@@ -1108,8 +1179,15 @@ function startGame() {
   updateGameButtons();
   timerRunning = true;
   clearInterval(timerInterval);
+  let warnedAt11 = timerSeconds <= 60; // don't re-warn if resuming inside last minute
   timerInterval = setInterval(() => {
     timerSeconds--;
+    // 1-minute warning at exactly 60 seconds left
+    if (timerSeconds === 60 && !warnedAt11) {
+      warnedAt11 = true;
+      document.getElementById('timerStatus').textContent = '⚠️ 1 minute warning!';
+      if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+    }
     if (timerSeconds <= 0) {
       timerSeconds = 0;
       clearInterval(timerInterval);
