@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -206,29 +207,40 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
   </div>
   <p id="headerStatus"><span class="live-dot"></span>Live • 8 Courts • 32 Players • 8 Rounds</p>
   <div class="tabs">
-    <button class="tab active" id="tab-roster"  onclick="showPage('roster',event)">👥 Roster</button>
-    <button class="tab"        id="tab-tourney" onclick="showPage('tourney',event)">🏆 Play</button>
+    <button class="tab active" id="tab-tourney" onclick="showPage('tourney',event)">🏆 Play</button>
     <button class="tab"        id="tab-map"     onclick="showPage('map',event)">🗺 Court Map</button>
     <button class="tab"        id="tab-stats"   onclick="showPage('stats',event)">📊 Stats</button>
     <button class="tab"        id="tab-rules"   onclick="showPage('rules',event)">📋 Rules</button>
+    <button class="tab"        id="tab-roster"  onclick="showPage('roster',event)">👥 Roster</button>
   </div>
 </div>
 <div class="admin-bar" id="adminBar">🔓 ADMIN MODE — <span style="cursor:pointer;text-decoration:underline" onclick="lockAdmin()">Lock</span></div>
 <div class="sync-bar" id="syncBar">⏳ Syncing with server...</div>
 
 <!-- ══════════ ROSTER PAGE ══════════ -->
-<div class="page active" id="page-roster">
+<div class="page" id="page-roster">
   <div id="adminStatusRoster"></div>
 
+  <!-- PUBLIC: everyone sees the player list -->
+  <div class="card">
+    <div class="flex-between" style="margin-bottom:9px">
+      <div class="card-title" style="margin-bottom:0">👥 Roster <span id="rosterCount" class="pill pill-green">0</span></div>
+    </div>
+    <div id="playerList" class="player-list">
+      <div class="empty-state"><span class="icon">🥒</span>Loading...</div>
+    </div>
+  </div>
+
+  <!-- ADMIN ONLY: add/edit/delete/assign -->
   <div class="locked-overlay" id="rosterAdminSection">
     <div class="lock-gate" onclick="openLockScreen()">
       <span style="font-size:1.8rem">🔒</span>
-      <span>Admin access required</span>
+      <span>Admin — edit roster &amp; assign courts</span>
       <span style="font-size:.72rem;font-weight:600;color:var(--muted)">Tap to unlock</span>
     </div>
 
     <div class="card">
-      <div class="card-title">📤 Add Players</div>
+      <div class="card-title">📤 Add / Edit Players</div>
       <div class="upload-area" onclick="document.getElementById('csvInput').click()">
         <span class="icon">📂</span>
         <strong>Upload CSV Roster</strong>
@@ -250,15 +262,13 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
 
     <div class="card">
       <div class="flex-between" style="margin-bottom:9px">
-        <div class="card-title" style="margin-bottom:0">👥 Roster <span id="rosterCount" class="pill pill-green">0</span></div>
+        <div class="card-title" style="margin-bottom:0">⚙️ Manage</div>
         <div class="flex-gap">
           <button class="btn btn-ghost btn-sm" onclick="shuffleAndAssign()">🎲 Assign Courts</button>
-          <button class="btn btn-red btn-sm" onclick="clearRoster()">🗑</button>
+          <button class="btn btn-red btn-sm" onclick="clearRoster()">🗑 Reset</button>
         </div>
       </div>
-      <div id="playerList" class="player-list">
-        <div class="empty-state"><span class="icon">🥒</span>Loading...</div>
-      </div>
+      <div id="playerListAdmin" class="player-list"></div>
     </div>
 
     <div class="card" id="assignmentsCard" style="display:none">
@@ -274,7 +284,7 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
 </div>
 
 <!-- ══════════ TOURNAMENT PAGE ══════════ -->
-<div class="page" id="page-tourney">
+<div class="page active" id="page-tourney">
   <div id="adminStatusTourney"></div>
 
   <div id="tourneyWelcome" class="card text-center" style="padding:28px">
@@ -704,20 +714,33 @@ function loadCSV(input) {
 function renderRoster() {
   const players = state.players;
   document.getElementById('rosterCount').textContent = players.length;
-  const list = document.getElementById('playerList');
+
+  // PUBLIC list — name + gender badge, no edit buttons
+  const publicList = document.getElementById('playerList');
   if (!players.length) {
-    list.innerHTML = '<div class="empty-state"><span class="icon">🥒</span>No players yet.</div>';
-    document.getElementById('assignmentsCard').style.display = 'none';
-    return;
+    publicList.innerHTML = '<div class="empty-state"><span class="icon">🥒</span>No players yet.</div>';
+  } else {
+    publicList.innerHTML = players.map(p => `
+      <div class="player-item">
+        <div class="player-badge" style="background:${p.gender==='F'?'#e91e8c':'var(--green)'}">${p.name[0]}</div>
+        <span class="player-name">${p.name}</span>
+        <span class="player-gender">${p.gender==='F'?'♀ F':'♂ M'}</span>
+      </div>`).join('');
   }
-  list.innerHTML = players.map((p,i) => `
-    <div class="player-item">
-      <div class="player-badge" style="background:${p.gender==='F'?'#e91e8c':'var(--green)'}">${p.name[0]}</div>
-      <span class="player-name">${p.name}</span>
-      <span class="player-gender">${p.gender==='F'?'♀':'♂'}</span>
-      <button class="btn btn-ghost btn-sm" onclick="openEdit(${i})">✏️</button>
-      <button class="btn btn-sm" style="background:#fde8e8;color:var(--red);border:none" onclick="removePlayer(${i})">✕</button>
-    </div>`).join('');
+
+  // ADMIN list — includes edit/delete buttons
+  const adminList = document.getElementById('playerListAdmin');
+  if (adminList) {
+    adminList.innerHTML = players.length ? players.map((p,i) => `
+      <div class="player-item">
+        <div class="player-badge" style="background:${p.gender==='F'?'#e91e8c':'var(--green)'}">${p.name[0]}</div>
+        <span class="player-name">${p.name}</span>
+        <span class="player-gender">${p.gender==='F'?'♀':'♂'}</span>
+        <button class="btn btn-ghost btn-sm" onclick="openEdit(${i})">✏️</button>
+        <button class="btn btn-sm" style="background:#fde8e8;color:var(--red);border:none" onclick="removePlayer(${i})">✕</button>
+      </div>`).join('')
+    : '<div class="empty-state"><span class="icon">🥒</span>No players yet.</div>';
+  }
 
   if (state.rounds[0]) {
     document.getElementById('assignmentsCard').style.display = 'block';
@@ -1138,14 +1161,12 @@ async function init() {
   const data = await apiGet();
   if (data) { state = data; localLastUpdated = data.lastUpdated; }
   showSyncBar(false);
+  // Default landing page is Play tab
+  showPageDirect('tourney');
   renderRoster();
   applyAdminState();
   renderAdminStatus();
-  if (state.tourneyStarted && state.rounds.length) {
-    document.getElementById('tourneyWelcome').style.display = 'none';
-    document.getElementById('tourneyActive').style.display = '';
-    renderTourney();
-  }
+  renderTourney();
   startPolling();
 }
 
