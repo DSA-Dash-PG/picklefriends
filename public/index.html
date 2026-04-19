@@ -273,19 +273,56 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
       <div class="flex-between" style="margin-bottom:9px">
         <div class="card-title" style="margin-bottom:0">⚙️ Manage</div>
         <div class="flex-gap">
-          <button class="btn btn-ghost btn-sm" onclick="shuffleAndAssign()">🎲 Assign Courts</button>
           <button class="btn btn-red btn-sm" onclick="clearRoster()">🗑 Reset</button>
         </div>
       </div>
       <div id="playerListAdmin" class="player-list"></div>
     </div>
 
+    <!-- Assignment mode picker -->
+    <div class="card" id="assignModeCard">
+      <div class="card-title">🎾 Court Assignments</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <button id="btnModeAuto" onclick="setAssignMode('auto')"
+          style="padding:14px 8px;border-radius:12px;border:2px solid var(--green);background:var(--green);color:white;font-family:'Fredoka One',cursive;font-size:.95rem;cursor:pointer;text-align:center;transition:all .2s">
+          🎲 Random<br><span style="font-size:.7rem;font-weight:400;opacity:.85">Auto-assign coed teams</span>
+        </button>
+        <button id="btnModeManual" onclick="setAssignMode('manual')"
+          style="padding:14px 8px;border-radius:12px;border:2px solid var(--border);background:white;color:var(--text);font-family:'Fredoka One',cursive;font-size:.95rem;cursor:pointer;text-align:center;transition:all .2s">
+          ✏️ Manual<br><span style="font-size:.7rem;font-weight:400;opacity:.7">Pick players per court</span>
+        </button>
+      </div>
+
+      <!-- AUTO mode -->
+      <div id="autoAssignSection">
+        <div class="alert alert-info" style="font-size:.78rem">Randomly pairs players coed. Court 8 = top court 🏆</div>
+        <button class="btn btn-green" onclick="shuffleAndAssign()" style="width:100%;margin-top:8px">🎲 Auto-Assign All Courts</button>
+      </div>
+
+      <!-- MANUAL mode -->
+      <div id="manualAssignSection" style="display:none">
+        <div class="alert alert-warn" style="font-size:.78rem">Assign each court manually. All 4 slots must be filled to start.</div>
+        <div style="margin:10px 0 6px">
+          <label>Number of Courts</label>
+          <select id="manualNumCourts" onchange="renderManualAssign()">
+            <option value="4">4 Courts (16 players)</option>
+            <option value="5">5 Courts (20 players)</option>
+            <option value="6">6 Courts (24 players)</option>
+            <option value="7">7 Courts (28 players)</option>
+            <option value="8" selected>8 Courts (32 players)</option>
+          </select>
+        </div>
+        <div id="manualAssignGrid"></div>
+        <div class="alert alert-info mt-8" style="font-size:.75rem" id="manualUnassignedAlert"></div>
+      </div>
+    </div>
+
+    <!-- Preview of assignments -->
     <div class="card" id="assignmentsCard" style="display:none">
-      <div class="card-title">🎲 Round 1 Court Assignments</div>
-      <div class="alert alert-info">Randomly assigned — coed teams prioritized! Start when ready.</div>
+      <div class="card-title" id="assignmentsCardTitle">🎲 Round 1 Court Assignments</div>
       <div id="assignmentsGrid" class="assign-grid"></div>
       <div class="mt-12 flex-gap">
-        <button class="btn btn-yellow" onclick="shuffleAndAssign()" style="flex:1">🔀 Re-shuffle</button>
+        <button class="btn btn-yellow" id="reshuffleBtn" onclick="shuffleAndAssign()" style="flex:1">🔀 Re-shuffle</button>
         <button class="btn btn-green" onclick="startTourney()" style="flex:1">🏁 Start Tournament!</button>
       </div>
     </div>
@@ -1076,7 +1113,7 @@ function finishTourney() {
 }
 
 // ════════════════════════════════════════════
-// COURT MAP
+// COURT MAP — PDF-style H-pattern layout
 // ════════════════════════════════════════════
 function renderMap() {
   const round = state.rounds[state.currentRound];
@@ -1086,41 +1123,36 @@ function renderMap() {
 
   if (!state.tourneyStarted || !round) {
     mapInfo.textContent = 'Waiting for tournament to start...';
-    ladderEl.innerHTML = renderLadderSVG(null);
+    ladderEl.innerHTML = renderPDFMap(null);
     gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="icon">🎾</span>Tournament not started yet.</div>';
     return;
   }
 
-  mapInfo.innerHTML = `<span class="live-dot"></span> <strong>Round ${state.currentRound + 1}</strong> — ${round.courts.length} active courts`;
+  mapInfo.innerHTML = `<span class="live-dot"></span> <strong>Round ${state.currentRound + 1}</strong> — ${round.courts.length} courts`;
+  ladderEl.innerHTML = renderPDFMap(round);
 
-  // Ladder SVG
-  ladderEl.innerHTML = renderLadderSVG(round);
-
-  // Court grid
+  // Court detail cards below the map
   gridEl.innerHTML = round.courts.slice().reverse().map((c, i) => {
-    const ci = round.courts.length - 1 - i; // original index for scores
+    const ci = round.courts.length - 1 - i;
     const sc = round.scores?.[ci] || {};
     const hasScore = sc.t1 !== undefined && sc.t2 !== undefined;
     const winner = hasScore ? (sc.t1 > sc.t2 ? 'A' : sc.t2 > sc.t1 ? 'B' : 'T') : '';
-    const isTop = c.court === round.courts.length;
     const numCourts = round.courts.length;
-
     const winNext  = !winner || winner==='T' ? c.court : Math.min(numCourts, c.court+1);
     const loseNext = !winner || winner==='T' ? c.court : Math.max(1, c.court-1);
+    const isTop = c.court === numCourts;
 
     return `
       <div class="map-court ${isTop?'top-court':''}">
-        <div class="map-court-num">${isTop?'🏆 ':''} Court ${c.court}</div>
+        <div class="map-court-num">${isTop?'🏆 ':''}Court ${c.court}</div>
         <div class="map-court-players">
           <span style="color:var(--green);font-weight:800">A:</span> ${c.team1.map(p=>p?.name||'?').join(' & ')}<br>
           <span style="color:var(--blue);font-weight:800">B:</span> ${c.team2.map(p=>p?.name||'?').join(' & ')}
         </div>
         <div class="map-court-score ${hasScore?'has-score':''}">
-          ${hasScore
-            ? `${sc.t1} – ${sc.t2} ${winner==='T'?'(Tie)':winner==='A'?'• Team A Wins':'• Team B Wins'}`
-            : 'No score yet'}
+          ${hasScore ? `${sc.t1}–${sc.t2} ${winner==='T'?'(Tie)':winner==='A'?'· A Wins':'· B Wins'}` : 'No score yet'}
         </div>
-        ${hasScore && winner !== 'T' ? `
+        ${hasScore && winner!=='T' ? `
           <div style="font-size:.72rem;margin-top:4px;line-height:1.6">
             <span style="color:var(--green)">↑ Winners → Court ${winNext}</span><br>
             <span style="color:var(--red)">↓ Losers → Court ${loseNext}</span>
@@ -1129,44 +1161,153 @@ function renderMap() {
   }).join('');
 }
 
-function renderLadderSVG(round) {
-  if (!round) {
-    return `<div style="text-align:center;color:var(--muted);padding:20px;font-size:.85rem">Ladder appears when tournament starts</div>`;
-  }
-  const courts = round.courts;
-  const n = courts.length;
-  const rowH = 52;
-  const svgH = n * rowH + 20;
-  const svgW = 340;
+function renderPDFMap(round) {
+  // PDF layout: two locations side by side
+  // Location 1 (left):  Courts 1-4  arranged in H-pattern
+  // Location 2 (right): Courts 5-8  arranged in H-pattern
+  // Courts 1=bottom-right, 2=top-left, 3=bottom-left, 4=bottom-right (of loc1)
+  // Courts 5=bottom-right, 6=bottom-right, 7=top-right, 8=top-left (of loc2)
+  // Numbering per PDF: loc1 top-left=2, top-right=1, bottom-left=3, bottom-right=4
+  //                    loc2 top-left=8, top-right=7, bottom-left=5, bottom-right=6
 
-  let rows = '';
-  for (let i = n; i >= 1; i--) {
-    const c = courts.find(x => x.court === i);
+  const courts = round?.courts || [];
+  const scores = round?.scores || {};
+
+  function getCourtInfo(courtNum) {
+    const c = courts.find(x => x.court === courtNum);
+    if (!c) return { players: '', score: '', winner: '', hasScore: false };
     const ci = courts.indexOf(c);
-    const sc = round.scores?.[ci] || {};
+    const sc = scores[ci] || {};
     const hasScore = sc.t1 !== undefined && sc.t2 !== undefined;
     const winner = hasScore ? (sc.t1 > sc.t2 ? 'A' : sc.t2 > sc.t1 ? 'B' : 'T') : '';
-    const y = (n - i) * rowH + 10;
-    const isTop = i === n;
-    const barColor = isTop ? '#d4a320' : '#2d7a3a';
-    const barW = 30 + (i / n) * 120; // wider = higher court
-    const scoreText = hasScore ? `${sc.t1}–${sc.t2}` : '–';
-    const names = c ? [...c.team1, ...c.team2].map(p => p?.name?.split(' ')[0] || '?').join(', ') : '';
+    const p1 = c.team1.map(p => p?.name?.split(' ')[0] || '?').join('/');
+    const p2 = c.team2.map(p => p?.name?.split(' ')[0] || '?').join('/');
+    return { players: `${p1} vs ${p2}`, score: hasScore ? `${sc.t1}–${sc.t2}` : '', winner, hasScore, c };
+  }
 
-    rows += `
-      <g transform="translate(0,${y})">
-        <rect x="8" y="4" width="${barW}" height="34" rx="6" fill="${barColor}" opacity="${0.15 + (i/n)*0.25}"/>
-        <rect x="8" y="4" width="4" height="34" rx="2" fill="${barColor}"/>
-        <text x="18" y="19" font-family="Fredoka One,cursive" font-size="13" fill="${barColor}">Court ${i}${isTop?' 🏆':''}</text>
-        <text x="18" y="33" font-family="Nunito,sans-serif" font-size="9.5" fill="#444" font-weight="600">${names}</text>
-        <rect x="${svgW-64}" y="6" width="56" height="30" rx="6" fill="${hasScore?'#e8f5eb':'#f5f5f5'}" stroke="${hasScore?'#4caf63':'#ddd'}" stroke-width="1"/>
-        <text x="${svgW-36}" y="26" font-family="Fredoka One,cursive" font-size="13" fill="${hasScore?'#2d7a3a':'#aaa'}" text-anchor="middle">${scoreText}</text>
+  // Colors
+  const teal = '#1a9b8a';
+  const tealDark = '#147a6c';
+  const courtBg = '#2cb5a0';
+  const courtLine = '#1a8070';
+  const red = '#e63946';
+  const gold = '#f4c430';
+  const white = '#ffffff';
+
+  function courtBox(x, y, w, h, courtNum, label) {
+    const info = getCourtInfo(courtNum);
+    const isTop = courtNum === (courts.length || 8);
+    const fill = isTop ? '#1a4a2e' : courtBg;
+    const border = isTop ? gold : courtLine;
+    const titleColor = isTop ? gold : white;
+    const scoreColor = info.hasScore ? '#90ee90' : '#aaa';
+
+    return `
+      <g>
+        <!-- Court surface -->
+        <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${fill}" stroke="${border}" stroke-width="${isTop?2:1}"/>
+        <!-- Court lines -->
+        <rect x="${x+4}" y="${y+4}" width="${w-8}" height="${h-8}" rx="2" fill="none" stroke="${white}" stroke-width="0.5" opacity="0.3"/>
+        <line x1="${x+w/2}" y1="${y+4}" x2="${x+w/2}" y2="${y+h-4}" stroke="${white}" stroke-width="0.5" opacity="0.3"/>
+        <line x1="${x+4}" y1="${y+h/2}" x2="${x+w-4}" y2="${y+h/2}" stroke="${white}" stroke-width="0.5" opacity="0.3"/>
+        <!-- Net line -->
+        <line x1="${x+8}" y1="${y+h/2}" x2="${x+w-8}" y2="${y+h/2}" stroke="${white}" stroke-width="1.5" opacity="0.6"/>
+        <!-- Court number badge -->
+        <rect x="${x+2}" y="${y+2}" width="22" height="14" rx="3" fill="${isTop?gold:tealDark}" opacity="0.9"/>
+        <text x="${x+13}" y="${y+12}" font-family="Fredoka One,cursive" font-size="9" fill="${isTop?tealDark:white}" text-anchor="middle">${label}</text>
+        <!-- Score -->
+        ${info.hasScore ? `<rect x="${x+w-28}" y="${y+2}" width="26" height="14" rx="3" fill="rgba(0,0,0,0.4)"/>
+        <text x="${x+w-15}" y="${y+12}" font-family="Fredoka One,cursive" font-size="8" fill="${scoreColor}" text-anchor="middle">${info.score}</text>` : ''}
+        ${isTop ? `<text x="${x+w/2}" y="${y+h-5}" font-family="Fredoka One,cursive" font-size="7" fill="${gold}" text-anchor="middle">🏆 TOP</text>` : ''}
       </g>`;
   }
 
-  return `<svg width="100%" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;display:block;margin:0 auto">
-    ${rows}
-  </svg>`;
+  function arrow(x1, y1, x2, y2, label='') {
+    const dx = x2-x1, dy = y2-y1;
+    const len = Math.sqrt(dx*dx+dy*dy);
+    const ux = dx/len, uy = dy/len;
+    const ax = x2-ux*8, ay = y2-uy*8;
+    const px = -uy*5, py = ux*5;
+    return `
+      <line x1="${x1}" y1="${y1}" x2="${ax}" y2="${ay}" stroke="${red}" stroke-width="3" stroke-linecap="round"/>
+      <polygon points="${x2},${y2} ${ax+px},${ay+py} ${ax-px},${ay-py}" fill="${red}"/>
+      ${label ? `<text x="${(x1+x2)/2+6}" y="${(y1+y2)/2}" font-family="Nunito,sans-serif" font-size="7" fill="${red}" font-weight="700">${label}</text>` : ''}`;
+  }
+
+  // SVG dimensions — two locations side by side
+  const W = 380, H = 280;
+  // Location boxes
+  const L1x = 10, L1y = 20, L1w = 160, L1h = 240;
+  const L2x = 210, L2y = 20, L2w = 160, L2h = 240;
+  // Court positions within each location (H-pattern: 2 top, 2 bottom)
+  const cw = 62, ch = 80, gap = 8;
+  // Loc1: courts 1(top-right), 2(top-left), 3(bottom-left), 4(bottom-right)
+  const l1_tl = { x: L1x+gap, y: L1y+gap+20 };           // Court 2
+  const l1_tr = { x: L1x+L1w-cw-gap, y: L1y+gap+20 };    // Court 1
+  const l1_bl = { x: L1x+gap, y: L1y+L1h-ch-gap };        // Court 3
+  const l1_br = { x: L1x+L1w-cw-gap, y: L1y+L1h-ch-gap };// Court 4
+  // Loc2: courts 8(top-left), 7(top-right), 5(bottom-left), 6(bottom-right)
+  const l2_tl = { x: L2x+gap, y: L2y+gap+20 };            // Court 8
+  const l2_tr = { x: L2x+L2w-cw-gap, y: L2y+gap+20 };     // Court 7
+  const l2_bl = { x: L2x+gap, y: L2y+L2h-ch-gap };         // Court 5
+  const l2_br = { x: L2x+L2w-cw-gap, y: L2y+L2h-ch-gap }; // Court 6
+
+  // Center connectors (H crossbar)
+  const cx1 = L1x+L1w/2, cy = H/2;
+  const cx2 = L2x+L2w/2;
+
+  return `
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+  <svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"
+    style="max-width:480px;display:block;margin:0 auto;border-radius:12px;background:linear-gradient(135deg,#0d3b2e,#1a5c47)">
+
+    <!-- Location 1 background -->
+    <rect x="${L1x}" y="${L1y}" width="${L1w}" height="${L1h}" rx="8" fill="${teal}" opacity="0.3" stroke="${teal}" stroke-width="1"/>
+    <text x="${L1x+L1w/2}" y="${L1y+14}" font-family="Fredoka One,cursive" font-size="9" fill="rgba(255,255,255,0.6)" text-anchor="middle">LOCATION 1 (Courts 1–4)</text>
+
+    <!-- Location 2 background -->
+    <rect x="${L2x}" y="${L2y}" width="${L2w}" height="${L2h}" rx="8" fill="${teal}" opacity="0.3" stroke="${teal}" stroke-width="1"/>
+    <text x="${L2x+L2w/2}" y="${L2y+14}" font-family="Fredoka One,cursive" font-size="9" fill="rgba(255,255,255,0.6)" text-anchor="middle">LOCATION 2 (Courts 5–8)</text>
+
+    <!-- H-pattern vertical connectors loc1 -->
+    <rect x="${L1x+L1w/2-3}" y="${l1_tl.y+ch}" width="6" height="${l1_bl.y-(l1_tl.y+ch)}" fill="${teal}" opacity="0.5"/>
+    <!-- H-pattern vertical connectors loc2 -->
+    <rect x="${L2x+L2w/2-3}" y="${l2_tl.y+ch}" width="6" height="${l2_bl.y-(l2_tl.y+ch)}" fill="${teal}" opacity="0.5"/>
+    <!-- H crossbar between locations -->
+    <rect x="${L1x+L1w}" y="${cy-3}" width="${L2x-(L1x+L1w)}" height="6" fill="${teal}" opacity="0.5"/>
+
+    <!-- Court boxes -->
+    ${courtBox(l1_tl.x, l1_tl.y, cw, ch, 2, 'Court 2')}
+    ${courtBox(l1_tr.x, l1_tr.y, cw, ch, 1, 'Court 1')}
+    ${courtBox(l1_bl.x, l1_bl.y, cw, ch, 3, 'Court 3')}
+    ${courtBox(l1_br.x, l1_br.y, cw, ch, 4, 'Court 4')}
+
+    ${courtBox(l2_tl.x, l2_tl.y, cw, ch, 8, 'Court 8')}
+    ${courtBox(l2_tr.x, l2_tr.y, cw, ch, 7, 'Court 7')}
+    ${courtBox(l2_bl.x, l2_bl.y, cw, ch, 5, 'Court 5')}
+    ${courtBox(l2_br.x, l2_br.y, cw, ch, 6, 'Court 6')}
+
+    <!-- Movement arrows (matching PDF pattern) -->
+    <!-- Loc1: top courts → down → crossbar → right -->
+    ${arrow(l1_tr.x+cw/2, l1_tr.y+ch, l1_br.x+cw/2, l1_br.y)}
+    ${arrow(l1_tl.x+cw/2, l1_tl.y+ch, l1_bl.x+cw/2, l1_bl.y)}
+    <!-- Loc1 bottom → crossbar center -->
+    ${arrow(l1_br.x+cw, l1_br.y+ch/2, L1x+L1w+5, cy)}
+    <!-- Crossbar → Loc2 -->
+    ${arrow(L2x-5, cy, l2_bl.x+cw/2, l2_bl.y+ch)}
+    ${arrow(L2x-5, cy, l2_br.x+cw/2, l2_br.y+ch)}
+    <!-- Loc2: bottom courts → up -->
+    ${arrow(l2_bl.x+cw/2, l2_bl.y, l2_tl.x+cw/2, l2_tl.y+ch)}
+    ${arrow(l2_br.x+cw/2, l2_br.y, l2_tr.x+cw/2, l2_tr.y+ch)}
+
+    <!-- Legend -->
+    <rect x="10" y="${H-18}" width="8" height="8" rx="2" fill="${red}"/>
+    <text x="22" y="${H-11}" font-family="Nunito,sans-serif" font-size="8" fill="rgba(255,255,255,0.7)">Player movement direction</text>
+    <rect x="140" y="${H-18}" width="8" height="8" rx="2" fill="${gold}"/>
+    <text x="152" y="${H-11}" font-family="Nunito,sans-serif" font-size="8" fill="rgba(255,255,255,0.7)">🏆 Top court</text>
+
+  </svg>
+  </div>`;
 }
 
 // ════════════════════════════════════════════
@@ -1513,8 +1654,170 @@ async function openReshuffleConfirm() {
 }
 
 // ════════════════════════════════════════════
-// INIT
+// ASSIGNMENT MODE — auto vs manual
 // ════════════════════════════════════════════
+let assignMode = 'auto';
+
+function setAssignMode(mode) {
+  assignMode = mode;
+  const btnAuto   = document.getElementById('btnModeAuto');
+  const btnManual = document.getElementById('btnModeManual');
+  const autoSec   = document.getElementById('autoAssignSection');
+  const manualSec = document.getElementById('manualAssignSection');
+  const reshuffleBtn = document.getElementById('reshuffleBtn');
+
+  if (mode === 'auto') {
+    btnAuto.style.background   = 'var(--green)';
+    btnAuto.style.borderColor  = 'var(--green)';
+    btnAuto.style.color        = 'white';
+    btnManual.style.background = 'white';
+    btnManual.style.borderColor= 'var(--border)';
+    btnManual.style.color      = 'var(--text)';
+    autoSec.style.display   = '';
+    manualSec.style.display = 'none';
+    if (reshuffleBtn) reshuffleBtn.style.display = '';
+  } else {
+    btnManual.style.background = 'var(--green)';
+    btnManual.style.borderColor= 'var(--green)';
+    btnManual.style.color      = 'white';
+    btnAuto.style.background   = 'white';
+    btnAuto.style.borderColor  = 'var(--border)';
+    btnAuto.style.color        = 'var(--text)';
+    autoSec.style.display   = 'none';
+    manualSec.style.display = '';
+    if (reshuffleBtn) reshuffleBtn.style.display = 'none';
+    renderManualAssign();
+  }
+  // Hide preview when switching modes
+  document.getElementById('assignmentsCard').style.display = 'none';
+}
+
+function renderManualAssign() {
+  const numCourts = parseInt(document.getElementById('manualNumCourts').value) || 8;
+  const grid = document.getElementById('manualAssignGrid');
+  const existing = state.rounds[0]?.courts || [];
+
+  // Build dropdowns for each court slot
+  const playerOpts = () => `<option value="">— unassigned —</option>` +
+    state.players.map((p,i) => `<option value="${i}">${p.name} (${p.gender==='F'?'♀':'♂'})</option>`).join('');
+
+  grid.innerHTML = Array.from({length: numCourts}, (_, ci) => {
+    const courtNum = ci + 1;
+    const ex = existing.find(c => c.court === courtNum);
+    const getIdx = (player) => player ? state.players.findIndex(p => p.id === player.id) : '';
+
+    return `
+      <div style="background:var(--green-pale);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--border)">
+        <div style="font-family:'Fredoka One',cursive;color:var(--green);font-size:.9rem;margin-bottom:8px">
+          🏟 Court ${courtNum} ${courtNum === numCourts ? '🏆' : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div>
+            <div style="font-size:.7rem;font-weight:700;color:var(--green);margin-bottom:3px">🟢 Team A</div>
+            <select id="ma_c${ci}_t1p1" onchange="updateManualPreview()" style="margin-bottom:4px;font-size:.78rem">
+              ${playerOpts()}
+            </select>
+            <select id="ma_c${ci}_t1p2" onchange="updateManualPreview()" style="font-size:.78rem">
+              ${playerOpts()}
+            </select>
+          </div>
+          <div>
+            <div style="font-size:.7rem;font-weight:700;color:var(--blue);margin-bottom:3px">🔵 Team B</div>
+            <select id="ma_c${ci}_t2p1" onchange="updateManualPreview()" style="margin-bottom:4px;font-size:.78rem">
+              ${playerOpts()}
+            </select>
+            <select id="ma_c${ci}_t2p2" onchange="updateManualPreview()" style="font-size:.78rem">
+              ${playerOpts()}
+            </select>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Re-populate existing assignments if any
+  if (existing.length) {
+    existing.forEach((c, ci) => {
+      const setVal = (id, player) => {
+        const el = document.getElementById(id);
+        if (!el || !player) return;
+        const idx = state.players.findIndex(p => p.id === player.id);
+        if (idx >= 0) el.value = idx;
+      };
+      setVal(`ma_c${ci}_t1p1`, c.team1[0]);
+      setVal(`ma_c${ci}_t1p2`, c.team1[1]);
+      setVal(`ma_c${ci}_t2p1`, c.team2[0]);
+      setVal(`ma_c${ci}_t2p2`, c.team2[1]);
+    });
+  }
+
+  updateManualPreview();
+}
+
+function updateManualPreview() {
+  const numCourts = parseInt(document.getElementById('manualNumCourts')?.value) || 8;
+  const courts = [];
+  const usedIds = {};
+  let hasConflict = false;
+  let unfilledSlots = 0;
+
+  for (let ci = 0; ci < numCourts; ci++) {
+    const getP = (selId) => {
+      const el = document.getElementById(selId);
+      if (!el || el.value === '') return null;
+      const idx = parseInt(el.value);
+      const p = state.players[idx];
+      if (!p) return null;
+      if (usedIds[p.id]) hasConflict = true;
+      usedIds[p.id] = true;
+      return p;
+    };
+    const t1p1 = getP(`ma_c${ci}_t1p1`);
+    const t1p2 = getP(`ma_c${ci}_t1p2`);
+    const t2p1 = getP(`ma_c${ci}_t2p1`);
+    const t2p2 = getP(`ma_c${ci}_t2p2`);
+    if (!t1p1) unfilledSlots++;
+    if (!t1p2) unfilledSlots++;
+    if (!t2p1) unfilledSlots++;
+    if (!t2p2) unfilledSlots++;
+    courts.push({ court: ci+1, team1: [t1p1, t1p2], team2: [t2p1, t2p2] });
+  }
+
+  // Unassigned players
+  const unassigned = state.players.filter(p => !usedIds[p.id]);
+  const alertEl = document.getElementById('manualUnassignedAlert');
+  if (alertEl) {
+    if (hasConflict) {
+      alertEl.textContent = '⚠️ Same player assigned to multiple courts!';
+      alertEl.style.background = '#fde8e8'; alertEl.style.color = 'var(--red)';
+    } else if (unassigned.length) {
+      alertEl.textContent = `⚠️ ${unassigned.length} unassigned: ${unassigned.map(p=>p.name.split(' ')[0]).join(', ')}`;
+      alertEl.style.background = '#fff8e1'; alertEl.style.color = '#7d5a00';
+    } else {
+      alertEl.textContent = '✅ All players assigned!';
+      alertEl.style.background = '#e8f5e9'; alertEl.style.color = '#2e7d32';
+    }
+  }
+
+  // Show preview
+  if (!hasConflict && unfilledSlots < numCourts * 4) {
+    state.rounds[0] = { courts, scores: {} };
+    document.getElementById('assignmentsCard').style.display = 'block';
+    document.getElementById('assignmentsCardTitle').textContent = '✏️ Manual Court Assignments';
+    document.getElementById('reshuffleBtn').style.display = 'none';
+    renderAssignments(courts);
+  }
+}
+
+async function applyManualAssign() {
+  const numCourts = parseInt(document.getElementById('manualNumCourts')?.value) || 8;
+  updateManualPreview();
+  const courts = state.rounds[0]?.courts;
+  if (!courts) return alert('Fill in all court assignments first.');
+  const res = await apiPost('save', state);
+  if (res) localLastUpdated = Date.now();
+  document.getElementById('assignmentsCard').style.display = 'block';
+  renderAssignments(courts);
+}
 async function init() {
   showSyncBar(true);
   const data = await apiGet();
