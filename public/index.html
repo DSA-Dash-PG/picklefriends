@@ -371,11 +371,14 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
       </button>
     </div>
 
-    <!-- Locked score section -->
+    <!-- PUBLIC: court display visible to everyone -->
+    <div id="publicCourtView"></div>
+
+    <!-- ADMIN: score entry + controls -->
     <div class="locked-overlay" id="tourneyAdminSection">
       <div class="lock-gate" onclick="openLockScreen()">
         <span style="font-size:1.8rem">🔒</span>
-        <span>Admin access required to enter scores</span>
+        <span>Admin — tap to enter scores</span>
         <span style="font-size:.72rem;font-weight:600;color:var(--muted)">Tap to unlock</span>
       </div>
       <div id="courtCards"></div>
@@ -387,7 +390,7 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
           <button class="btn btn-sm" style="background:#fff8e1;color:#7d5a00;border:1px solid #ffe082;flex:1" onclick="openMoveModal()">🔀 Move Player</button>
           <button class="btn btn-sm" style="background:#fff8e1;color:#7d5a00;border:1px solid #ffe082;flex:1" onclick="openReshuffleConfirm()">🎲 Re-shuffle Round</button>
         </div>
-        <div class="text-muted text-sm mt-8">Tap any court's ✏️ button above to edit its pairings directly.</div>
+        <div class="text-muted text-sm mt-8">Tap any court's ✏️ button above to edit pairings.</div>
       </div>
 
       <div class="card" style="margin-top:8px">
@@ -990,48 +993,97 @@ function renderTourney() {
   document.getElementById('nextRoundBtn').textContent =
     state.currentRound >= 7 ? '🏁 Finish Tournament' : 'Next Round →';
 
+  // ── PUBLIC view — everyone sees this ──────────────────────────────
+  document.getElementById('publicCourtView').innerHTML = round.courts.map((c, ci) => {
+    const sc = round.scores?.[ci] || {};
+    const t1 = sc.t1 ?? null; const t2 = sc.t2 ?? null;
+    const hasScore = t1 !== null && t2 !== null;
+    const winner = hasScore ? (t1 > t2 ? 'A' : t2 > t1 ? 'B' : 'T') : '';
+    const isTop = c.court === round.courts.length;
+
+    return `
+      <div style="background:white;border-radius:13px;padding:12px;margin-bottom:9px;
+        border:2px solid ${hasScore ? 'var(--green-light)' : isTop ? 'var(--yellow)' : 'var(--border)'};
+        box-shadow:0 2px 6px rgba(0,0,0,.06)">
+        <!-- Court header -->
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+          <div style="width:28px;height:28px;background:${isTop?'#d4a320':'var(--court-bg)'};border-radius:6px;
+            display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:.78rem">${c.court}</div>
+          <span style="font-family:'Fredoka One',cursive;font-size:1rem;color:${isTop?'#7d5a00':'var(--green)'}">
+            Court ${c.court}${isTop?' 🏆':''}
+          </span>
+          ${hasScore
+            ? `<span style="margin-left:auto;font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--green);
+                background:var(--green-pale);padding:2px 10px;border-radius:20px">${t1} – ${t2}</span>`
+            : `<span style="margin-left:auto;font-size:.72rem;color:var(--muted);font-weight:700">In progress...</span>`
+          }
+        </div>
+        <!-- Teams -->
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center">
+          <div style="background:${winner==='A'?'#e8f5e9':'var(--green-pale)'};border-radius:9px;padding:8px;text-align:center;
+            border:1.5px solid ${winner==='A'?'var(--green-light)':'var(--border)'}">
+            <div style="font-size:.75rem;font-weight:800;color:var(--green);line-height:1.5">
+              ${c.team1.map(p=>`<div>${p?.name||'?'}</div>`).join('')}
+            </div>
+            ${winner==='A'?'<div style="font-size:.68rem;font-weight:800;color:var(--green);margin-top:3px">🏆 Winners</div>':''}
+          </div>
+          <div style="font-family:\'Fredoka One\',cursive;color:var(--muted);font-size:.9rem;text-align:center">VS</div>
+          <div style="background:${winner==='B'?'#e3f2fd':'#f0f7ff'};border-radius:9px;padding:8px;text-align:center;
+            border:1.5px solid ${winner==='B'?'#90caf9':'#c5d8f0'}">
+            <div style="font-size:.75rem;font-weight:800;color:var(--blue);line-height:1.5">
+              ${c.team2.map(p=>`<div>${p?.name||'?'}</div>`).join('')}
+            </div>
+            ${winner==='B'?'<div style="font-size:.68rem;font-weight:800;color:var(--blue);margin-top:3px">🏆 Winners</div>':''}
+          </div>
+        </div>
+        ${winner==='T'?'<div style="text-align:center;font-size:.75rem;font-weight:700;color:#f57c00;margin-top:6px">⚖️ Tie</div>':''}
+        ${hasScore && winner !== 'T' ? `
+          <div style="margin-top:6px;font-size:.72rem;color:var(--muted);text-align:center">
+            ${getMovementHint(c, winner)}
+          </div>` : ''}
+      </div>`;
+  }).join('');
+
+  // ── ADMIN score entry — only visible when unlocked ─────────────────
   document.getElementById('courtCards').innerHTML = round.courts.map((c, ci) => {
     const sc = round.scores?.[ci] || {};
     const t1 = sc.t1 ?? ''; const t2 = sc.t2 ?? '';
     const hasScore = t1 !== '' && t2 !== '';
     const winner = hasScore ? (parseInt(t1) > parseInt(t2) ? 'A' : parseInt(t2) > parseInt(t1) ? 'B' : 'T') : '';
-    const savedBadge = hasScore ? `<span class="saved-badge">✓ Saved</span>` : '';
     return `
       <div class="court-card ${hasScore?'scored':''}" id="cc-${ci}">
         <div class="court-num">
           <div class="court-icon">${c.court}</div>
           Court ${c.court}
-          ${c.court === 8 ? '<span class="pill pill-yellow" style="margin-left:auto">🏆 Top Court</span>' : ''}
-          <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openCourtEdit(${ci})">✏️ Edit</button>
+          ${c.court === round.courts.length ? '<span class="pill pill-yellow" style="margin-left:auto">🏆 Top</span>' : ''}
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openCourtEdit(${ci})">✏️</button>
+          ${hasScore ? '<span class="saved-badge">✓</span>' : ''}
         </div>
         <div class="teams-row">
           <div class="team-box">
             <div class="team-names">${c.team1.map(p=>p?.name||'?').join('<br>')}</div>
-            ${winner==='A'?'<div class="winner-badge">🏆 Winners</div>':''}
+            ${winner==='A'?'<div class="winner-badge">🏆 Win</div>':''}
           </div>
           <div class="vs-badge">VS</div>
           <div class="team-box">
             <div class="team-names">${c.team2.map(p=>p?.name||'?').join('<br>')}</div>
-            ${winner==='B'?'<div class="winner-badge">🏆 Winners</div>':''}
+            ${winner==='B'?'<div class="winner-badge">🏆 Win</div>':''}
           </div>
         </div>
         <div class="score-row">
           <div style="flex:1">
             <input type="number" min="0" max="99" placeholder="0" value="${t1}"
               onchange="submitScore(${ci},'A',this.value)" style="text-align:center;font-size:1.3rem;font-weight:800">
-            <div class="score-lbl">Team A Score</div>
+            <div class="score-lbl">Team A</div>
           </div>
           <div style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--muted);padding:0 3px">—</div>
           <div style="flex:1">
             <input type="number" min="0" max="99" placeholder="0" value="${t2}"
               onchange="submitScore(${ci},'B',this.value)" style="text-align:center;font-size:1.3rem;font-weight:800">
-            <div class="score-lbl">Team B Score</div>
+            <div class="score-lbl">Team B</div>
           </div>
         </div>
-        ${winner==='T'?'<div class="alert alert-warn" style="margin-top:7px;font-size:.78rem">⚖️ Tie — no movement this round</div>':''}
-        <div style="margin-top:5px;font-size:.75rem;color:var(--muted)">
-          ${getMovementHint(c, winner)}
-        </div>
+        ${winner==='T'?'<div class="alert alert-warn" style="margin-top:7px;font-size:.78rem">⚖️ Tie</div>':''}
       </div>`;
   }).join('');
 }
