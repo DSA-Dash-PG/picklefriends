@@ -212,15 +212,14 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
     <button class="tab"        id="tab-stats"   onclick="showPage('stats',event)">📊 Stats</button>
     <button class="tab"        id="tab-rules"   onclick="showPage('rules',event)">📋 Rules</button>
     <button class="tab"        id="tab-roster"  onclick="showPage('roster',event)">👥 Roster</button>
+    <button class="tab"        id="tab-ladders" onclick="showPage('ladders',event)">🪜 Ladders</button>
   </div>
 </div>
 <div class="admin-bar" id="adminBar">
-  🔓 ADMIN MODE &nbsp;|&nbsp;
-  <select id="tourneySelect" onchange="switchTourney(this.value)"
+  🔓 ADMIN MODE &nbsp;|&nbsp; Ladder:
+  <select id="tourneySelect" onchange="switchLadder(this.value)"
     style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:6px;padding:2px 6px;font-size:.72rem;font-family:'Nunito',sans-serif;font-weight:700">
-    <option value="live">🏆 Spring Bash (LIVE)</option>
-    <option value="test">🧪 Test Tournament</option>
-    <option value="practice">📋 Practice</option>
+    <option value="">— loading —</option>
   </select>
   &nbsp;|&nbsp; <span style="cursor:pointer;text-decoration:underline" onclick="lockAdmin()">Lock</span>
 </div>
@@ -329,6 +328,41 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
   </div><!-- /rosterAdminSection -->
 </div>
 
+<!-- ══════════ LADDERS PAGE ══════════ -->
+<div class="page" id="page-ladders">
+  <div id="adminStatusLadders"></div>
+
+  <!-- Active ladder card -->
+  <div class="card" id="laddersActiveCard" style="border-color:var(--green-light);background:linear-gradient(180deg,#eef9f0 0%,white 100%)">
+    <div class="card-title">🟢 Active Ladder</div>
+    <div id="laddersActiveBody" class="empty-state"><span class="icon">🥒</span>No active ladder right now.</div>
+  </div>
+
+  <!-- Upcoming ladders -->
+  <div class="card">
+    <div class="flex-between" style="margin-bottom:9px">
+      <div class="card-title" style="margin-bottom:0">🟡 Upcoming Ladders <span id="upcomingCount" class="pill pill-yellow">0</span></div>
+      <button class="btn btn-green btn-sm" id="newLadderBtnInline" onclick="createNewLadder()" style="display:none">＋ New Ladder</button>
+    </div>
+    <div id="upcomingList"><div class="empty-state"><span class="icon">📋</span>No upcoming ladders. Admin can create one.</div></div>
+  </div>
+
+  <!-- Completed ladders -->
+  <div class="card">
+    <div class="card-title">⚪ Completed Ladders <span id="completedCount" class="pill" style="background:#eef0f2;color:#6b8f71;border:1px solid var(--border)">0</span></div>
+    <div id="completedList"><div class="empty-state"><span class="icon">🏁</span>No completed ladders yet.</div></div>
+  </div>
+
+  <!-- Help text -->
+  <div class="card" style="background:#f8fbf9">
+    <div style="font-size:.82rem;line-height:1.7;color:var(--muted)">
+      <p>🟢 <strong>Active</strong> = the ladder being played right now. Public viewers see this by default.</p>
+      <p>🟡 <strong>Upcoming</strong> = roster is being prepped. Not visible to the public until activated.</p>
+      <p>⚪ <strong>Completed</strong> = past ladder, read-only. Tap to browse standings.</p>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ TOURNAMENT PAGE ══════════ -->
 <div class="page active" id="page-tourney">
   <div id="adminStatusTourney"></div>
@@ -397,6 +431,9 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
         <div class="flex-gap">
           <button class="btn btn-ghost" style="flex:1" onclick="prevRound()">← Prev Round</button>
           <button class="btn btn-green" style="flex:1" id="nextRoundBtn" onclick="nextRound()">Next Round →</button>
+        </div>
+        <div class="flex-gap mt-12">
+          <button class="btn btn-sm" style="flex:1;background:#fde8e8;color:var(--red);border:1px solid #f5b7b1" onclick="finishLadder()">🏁 Finish Ladder (mark completed)</button>
         </div>
       </div>
     </div><!-- /tourneyAdminSection -->
@@ -624,31 +661,57 @@ label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;disp
 const ADMIN_PIN = '2626'; // must match ADMIN_PIN in Netlify env vars
 const POLL_INTERVAL = 5000; // ms between server polls
 
-// Active tournament key — changes when admin switches tourneys
-let activeTourney = 'live'; // default = live tournament
+// ════════════════════════════════════════════
+// LADDERS MODEL
+// ════════════════════════════════════════════
+// Server now stores a ladders-index + per-ladder blobs. The frontend tracks:
+//   laddersIndex.activeId     → which ladder the public sees by default
+//   viewingLadderId           → which ladder this client is currently viewing
+//   state                     → that ladder's full state
+//
+// `viewingLadderId` defaults to activeId. Admin can switch via the dropdown
+// to view/edit upcoming or completed ladders. Adding/uploading roster only
+// mutates state.players — it never flips state.tourneyStarted or touches rounds.
+let laddersIndex = { activeId: null, ladders: [], lastUpdated: 0 };
+let viewingLadderId = null;
 
-function switchTourney(key) {
+function ladderEntry(id) {
+  return laddersIndex.ladders.find(l => l.id === id) || null;
+}
+
+async function switchLadder(id) {
   if (!isAdmin) return;
-  if (key === activeTourney) return;
-  if (!confirm(`Switch to "${key}" tournament? Current view will reload.`)) {
-    document.getElementById('tourneySelect').value = activeTourney;
-    return;
-  }
-  activeTourney = key;
+  if (id === '__new__') { await createNewLadder(); return; }
+  if (!id || id === viewingLadderId) return;
+  viewingLadderId = id;
   localLastUpdated = 0;
-  state = { players: [], rounds: [], currentRound: 0, tourneyStarted: false, lastUpdated: 0 };
-  // Show a banner so everyone knows which tourney is active
-  document.getElementById('headerStatus').innerHTML =
-    activeTourney === 'live'
-      ? `<span class="live-dot"></span>Live • 8 Courts • 32 Players • 8 Rounds`
-      : `<span style="color:#ffe082;font-weight:800">[${activeTourney.toUpperCase()}]</span> Test mode — not the live tournament`;
-  init();
+  state = { id, players: [], rounds: [], currentRound: 0, tourneyStarted: false, lastUpdated: 0 };
+  await loadActiveLadder();
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+}
+
+async function createNewLadder() {
+  const proposed = `Ladder ${(laddersIndex.ladders.length || 0) + 1}`;
+  const name = (prompt('Name for the new ladder?', proposed) || '').trim();
+  if (!name) { renderLadderPicker(); return; }
+  const res = await apiPost('createLadder', { name });
+  if (!res?.ok) { renderLadderPicker(); return; }
+  if (res.index) laddersIndex = res.index;
+  viewingLadderId = res.ladder.id;
+  state = res.ladder;
+  localLastUpdated = state.lastUpdated;
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
 }
 
 // ════════════════════════════════════════════
-// STATE
+// STATE — currently-viewed ladder
 // ════════════════════════════════════════════
 let state = {
+  id: null, name: '', status: 'none',
   players: [], rounds: [], currentRound: 0,
   tourneyStarted: false, lastUpdated: 0
 };
@@ -664,13 +727,25 @@ let pollTimer = null;
 // ════════════════════════════════════════════
 // API HELPERS
 // ════════════════════════════════════════════
-async function apiGet() {
+async function apiGetIndex() {
   try {
-    const r = await fetch(`/api?action=state&tourney=${activeTourney}`);
+    const r = await fetch(`/api?action=index`);
     if (!r.ok) throw new Error('Server error');
     return await r.json();
   } catch(e) {
-    console.warn('API GET failed, using local state', e);
+    console.warn('API index GET failed', e);
+    return null;
+  }
+}
+
+async function apiGetLadder(id) {
+  try {
+    const qs = id ? `&ladder=${encodeURIComponent(id)}` : '';
+    const r = await fetch(`/api?action=state${qs}`);
+    if (!r.ok) throw new Error('Server error');
+    return await r.json();
+  } catch(e) {
+    console.warn('API ladder GET failed, using local state', e);
     return null;
   }
 }
@@ -678,14 +753,19 @@ async function apiGet() {
 async function apiPost(action, body) {
   try {
     showSyncBar(true);
-    const r = await fetch(`/api?action=${action}&tourney=${activeTourney}`, {
+    // Most actions target the currently-viewed ladder; createLadder/setActive use body.id.
+    const targetId = body?.id || viewingLadderId;
+    const ladderQs = targetId && action !== 'createLadder' ? `&ladder=${encodeURIComponent(targetId)}` : '';
+    const r = await fetch(`/api?action=${action}${ladderQs}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-pin': ADMIN_PIN },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body || {})
     });
     const data = await r.json();
     showSyncBar(false);
     if (!r.ok) throw new Error(data.error || 'Server error');
+    // Many actions return the latest index; keep local copy in sync.
+    if (data.index) laddersIndex = data.index;
     return data;
   } catch(e) {
     showSyncBar(false);
@@ -695,19 +775,66 @@ async function apiPost(action, body) {
   }
 }
 
+// Decide which ladder to view by default.
+// Priority: active → most recent completed → most recent upcoming.
+// (Public viewers should stay on the last completed ladder while admin
+// preps an upcoming one — the upcoming ladder is half-built and not
+// meant for public eyes until the admin explicitly starts it.)
+function pickViewingLadderId() {
+  if (laddersIndex.activeId) return laddersIndex.activeId;
+  const completed = laddersIndex.ladders
+    .filter(l => l.status === 'completed')
+    .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+  if (completed.length) return completed[0].id;
+  const upcoming = laddersIndex.ladders
+    .filter(l => l.status === 'upcoming')
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  if (upcoming.length) return upcoming[0].id;
+  return null;
+}
+
+async function loadActiveLadder() {
+  if (!viewingLadderId) {
+    state = { id: null, name: '', status: 'none', players: [], rounds: [], currentRound: 0, tourneyStarted: false, lastUpdated: 0 };
+    localLastUpdated = 0;
+    return;
+  }
+  const data = await apiGetLadder(viewingLadderId);
+  if (data) {
+    state = data;
+    localLastUpdated = data.lastUpdated || 0;
+  }
+}
+
 function showSyncBar(on) {
   document.getElementById('syncBar').classList.toggle('visible', on);
 }
 
 // ════════════════════════════════════════════
-// POLLING — refresh state from server every 5s
+// POLLING — refresh index + currently-viewed ladder every 5s
 // ════════════════════════════════════════════
 async function pollServer() {
-  const data = await apiGet();
+  const idx = await apiGetIndex();
+  if (idx) {
+    const newActive = idx.activeId !== laddersIndex.activeId;
+    laddersIndex = idx;
+    // If admin hasn't picked a specific ladder, follow activeId.
+    if (!viewingLadderId || (newActive && viewingLadderId !== idx.activeId && !isAdmin)) {
+      viewingLadderId = pickViewingLadderId();
+      await loadActiveLadder();
+      refreshAllViews();
+      renderHeaderStatus();
+      renderLadderPicker();
+      return;
+    }
+    renderLadderPicker();
+  }
+  const data = await apiGetLadder(viewingLadderId);
   if (data && data.lastUpdated !== localLastUpdated) {
     localLastUpdated = data.lastUpdated;
     state = data;
     refreshAllViews();
+    renderHeaderStatus();
   }
 }
 
@@ -718,11 +845,219 @@ function startPolling() {
 
 function refreshAllViews() {
   renderRoster();
-  // Only re-render tourney/map/stats if their page is active
+  // Only re-render tourney/map/stats/ladders if their page is active
   const activePage = document.querySelector('.page.active')?.id;
   if (activePage === 'page-tourney') renderTourney();
   if (activePage === 'page-map') renderMap();
   if (activePage === 'page-stats') renderStats();
+  if (activePage === 'page-ladders') renderLadders();
+}
+
+// Header sub-line reflects the currently-viewed ladder + its status.
+function renderHeaderStatus() {
+  const el = document.getElementById('headerStatus');
+  if (!el) return;
+  if (!state.id) {
+    el.innerHTML = `<span style="color:#ffe082;font-weight:800">No ladder yet</span> &nbsp;·&nbsp; admin can create one`;
+    return;
+  }
+  const courts = state.rounds[0]?.courts?.length || 8;
+  const playerCount = state.players?.length || 0;
+  if (state.status === 'active') {
+    el.innerHTML = `<span class="live-dot"></span><strong>${escapeHtml(state.name)}</strong> · LIVE · ${courts} Courts · ${playerCount} Players`;
+  } else if (state.status === 'upcoming') {
+    el.innerHTML = `<span style="color:#ffe082;font-weight:800">UPCOMING</span> · <strong>${escapeHtml(state.name)}</strong> · ${playerCount} Players`;
+  } else if (state.status === 'completed') {
+    el.innerHTML = `<span style="color:#b8dbb9">COMPLETED</span> · <strong>${escapeHtml(state.name)}</strong> · ${playerCount} Players · read-only`;
+  } else {
+    el.innerHTML = `<strong>${escapeHtml(state.name || 'Ladder')}</strong>`;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Rebuilds the admin ladder dropdown from laddersIndex.
+function renderLadderPicker() {
+  const sel = document.getElementById('tourneySelect');
+  if (!sel) return;
+  const opts = laddersIndex.ladders.map(l => {
+    const tag = l.status === 'active' ? '🟢' : l.status === 'upcoming' ? '🟡' : '⚪';
+    return `<option value="${l.id}" ${l.id === viewingLadderId ? 'selected' : ''}>${tag} ${escapeHtml(l.name)}${l.status==='active'?' (LIVE)':l.status==='upcoming'?' (upcoming)':' (completed)'}</option>`;
+  }).join('');
+  sel.innerHTML = opts + `<option value="__new__">＋ New Ladder…</option>`;
+}
+
+// ════════════════════════════════════════════
+// LADDERS PAGE
+// ════════════════════════════════════════════
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function renderLadders() {
+  const ladders = laddersIndex.ladders || [];
+  const active = ladders.filter(l => l.status === 'active');
+  const upcoming = ladders.filter(l => l.status === 'upcoming')
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const completed = ladders.filter(l => l.status === 'completed')
+    .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+
+  // Show/hide the "+ New Ladder" inline button based on admin state
+  const newBtn = document.getElementById('newLadderBtnInline');
+  if (newBtn) newBtn.style.display = isAdmin ? '' : 'none';
+
+  // ── Active card ──
+  const activeBody = document.getElementById('laddersActiveBody');
+  if (activeBody) {
+    if (!active.length) {
+      activeBody.className = 'empty-state';
+      activeBody.innerHTML = `<span class="icon">🥒</span>No active ladder right now.${isAdmin ? '<br><span style="font-size:.78rem">Activate an upcoming ladder below, or create one.</span>' : ''}`;
+    } else {
+      const l = active[0];
+      const isViewing = l.id === viewingLadderId;
+      activeBody.className = '';
+      activeBody.innerHTML = `
+        <div class="player-item" style="background:white;border:2px solid var(--green-light);padding:12px">
+          <div style="flex:1">
+            <div style="font-family:'Fredoka One',cursive;color:var(--green);font-size:1.05rem">${escapeHtml(l.name)}</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:2px">Started ${fmtDate(l.createdAt)} · <span class="live-dot"></span>LIVE</div>
+          </div>
+          ${isViewing
+            ? `<span class="pill pill-green">Viewing</span>`
+            : `<button class="btn btn-ghost btn-sm" onclick="viewLadder('${l.id}')">View</button>`}
+          ${isAdmin ? `<button class="btn btn-sm" style="background:#fde8e8;color:var(--red);border:1px solid #f5b7b1" onclick="finishLadder('${l.id}')">🏁 Finish</button>` : ''}
+        </div>`;
+    }
+  }
+
+  // ── Upcoming list ──
+  const upcomingCountEl = document.getElementById('upcomingCount');
+  if (upcomingCountEl) upcomingCountEl.textContent = upcoming.length;
+  const upcomingList = document.getElementById('upcomingList');
+  if (upcomingList) {
+    if (!upcoming.length) {
+      upcomingList.innerHTML = `<div class="empty-state"><span class="icon">📋</span>No upcoming ladders.${isAdmin ? ' Tap ＋ New Ladder above.' : ''}</div>`;
+    } else {
+      upcomingList.innerHTML = upcoming.map(l => {
+        const isViewing = l.id === viewingLadderId;
+        return `
+          <div class="player-item" style="padding:12px">
+            <div style="flex:1">
+              <div style="font-weight:800;font-size:.95rem">${escapeHtml(l.name)}</div>
+              <div style="font-size:.72rem;color:var(--muted);margin-top:2px">Created ${fmtDate(l.createdAt)}</div>
+            </div>
+            ${isViewing
+              ? `<span class="pill pill-yellow">Editing</span>`
+              : `<button class="btn btn-ghost btn-sm" onclick="viewLadder('${l.id}')">${isAdmin ? 'Edit' : 'View'}</button>`}
+            ${isAdmin ? `
+              <button class="btn btn-green btn-sm" onclick="activateLadder('${l.id}')">▶ Activate</button>
+              <button class="btn btn-sm" style="background:#fde8e8;color:var(--red);border:none" onclick="deleteLadderConfirm('${l.id}','${escapeHtml(l.name).replace(/'/g, "\\'")}')">🗑</button>
+            ` : ''}
+          </div>`;
+      }).join('');
+    }
+  }
+
+  // ── Completed list ──
+  const completedCountEl = document.getElementById('completedCount');
+  if (completedCountEl) completedCountEl.textContent = completed.length;
+  const completedList = document.getElementById('completedList');
+  if (completedList) {
+    if (!completed.length) {
+      completedList.innerHTML = `<div class="empty-state"><span class="icon">🏁</span>No completed ladders yet.</div>`;
+    } else {
+      completedList.innerHTML = completed.map(l => {
+        const isViewing = l.id === viewingLadderId;
+        return `
+          <div class="player-item" style="padding:12px">
+            <div style="flex:1">
+              <div style="font-weight:800;font-size:.95rem">${escapeHtml(l.name)}</div>
+              <div style="font-size:.72rem;color:var(--muted);margin-top:2px">Completed ${fmtDate(l.completedAt)}</div>
+            </div>
+            ${isViewing
+              ? `<span class="pill" style="background:#eef0f2;color:#6b8f71;border:1px solid var(--border)">Viewing</span>`
+              : `<button class="btn btn-ghost btn-sm" onclick="viewLadder('${l.id}')">View</button>`}
+          </div>`;
+      }).join('');
+    }
+  }
+}
+
+// Switch viewing to a different ladder (works for everyone — public can browse completed too).
+async function viewLadder(id) {
+  if (!id || id === viewingLadderId) return;
+  viewingLadderId = id;
+  localLastUpdated = 0;
+  state = { id, players: [], rounds: [], currentRound: 0, tourneyStarted: false, lastUpdated: 0 };
+  await loadActiveLadder();
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+  renderLadders();
+  // Bring the user to a sensible page based on the ladder's status.
+  if (state.status === 'active' || state.status === 'completed') {
+    showPageDirect('tourney');
+  }
+}
+
+// Admin: promote an upcoming ladder to active. Demotes any prior active to completed (server side).
+async function activateLadder(id) {
+  if (!isAdmin) return;
+  const entry = laddersIndex.ladders.find(l => l.id === id);
+  if (!entry) return;
+  const prevActive = laddersIndex.ladders.find(l => l.status === 'active');
+  const msg = prevActive && prevActive.id !== id
+    ? `Activate "${entry.name}"?\n\nThis will mark "${prevActive.name}" as completed.`
+    : `Activate "${entry.name}"?`;
+  if (!confirm(msg)) return;
+  const res = await apiPost('setActive', { id });
+  if (!res?.ok) return;
+  if (res.ladder) { state = res.ladder; localLastUpdated = state.lastUpdated; viewingLadderId = res.ladder.id; }
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+  renderLadders();
+}
+
+// Admin: mark the currently-active ladder (or any ladder) as completed.
+async function finishLadder(id) {
+  if (!isAdmin) return;
+  const targetId = id || state.id;
+  const entry = laddersIndex.ladders.find(l => l.id === targetId);
+  if (!entry) return;
+  if (!confirm(`Finish "${entry.name}"?\n\nIt will move to Completed Ladders (read-only).`)) return;
+  const res = await apiPost('completeLadder', { id: targetId });
+  if (!res?.ok) return;
+  if (res.ladder && res.ladder.id === viewingLadderId) {
+    state = res.ladder;
+    localLastUpdated = state.lastUpdated;
+  }
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+  renderLadders();
+}
+
+// Admin: delete an upcoming ladder.
+async function deleteLadderConfirm(id, name) {
+  if (!isAdmin) return;
+  if (!confirm(`Delete upcoming ladder "${name}"?\n\nThis cannot be undone.`)) return;
+  const res = await apiPost('deleteLadder', { id });
+  if (!res?.ok) return;
+  // If we were viewing the deleted one, fall back to the public default.
+  if (viewingLadderId === id) {
+    viewingLadderId = pickViewingLadderId();
+    await loadActiveLadder();
+  }
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+  renderLadders();
 }
 
 // ════════════════════════════════════════════
@@ -737,6 +1072,7 @@ function showPage(p, evt) {
   if (p === 'stats') renderStats();
   if (p === 'tourney') renderTourney();
   if (p === 'map') renderMap();
+  if (p === 'ladders') renderLadders();
   renderAdminStatus();
 }
 
@@ -803,12 +1139,15 @@ function applyAdminState() {
   document.getElementById('rosterAdminSection')?.classList.toggle('unlocked', isAdmin);
   document.getElementById('tourneyAdminSection')?.classList.toggle('unlocked', isAdmin);
   renderAdminStatus();
+  if (isAdmin) renderLadderPicker();
+  // Re-render ladders so admin-only controls (New, Activate, Delete, Finish) appear or hide
+  if (document.querySelector('.page.active')?.id === 'page-ladders') renderLadders();
 }
 function renderAdminStatus() {
   const html = isAdmin
     ? `<div class="admin-status-bar">🔓 Admin Mode <button class="btn btn-sm" style="background:#fde8e8;color:var(--red);border:none" onclick="lockAdmin()">🔒 Lock</button></div>`
     : `<div class="admin-status-bar" style="background:#f0f7f1;border-color:var(--border);color:var(--muted)">🔒 View only &nbsp;·&nbsp; <span style="cursor:pointer;text-decoration:underline;color:var(--green)" onclick="openLockScreen()">Admin login</span></div>`;
-  ['adminStatusRoster','adminStatusTourney'].forEach(id => {
+  ['adminStatusRoster','adminStatusTourney','adminStatusLadders'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
   });
@@ -817,22 +1156,45 @@ function renderAdminStatus() {
 // ════════════════════════════════════════════
 // ROSTER
 // ════════════════════════════════════════════
+//
+// Adding/uploading/removing players ONLY mutates state.players for the
+// currently-viewed ladder. It must NEVER touch tourneyStarted, rounds, or
+// scores — those flip only when admin explicitly starts the ladder.
 async function addPlayer() {
+  if (!ensureEditableLadder()) return;
   const name = document.getElementById('newPlayerName').value.trim();
   const gender = document.getElementById('newPlayerGender').value;
   if (!name) return alert('Enter a player name!');
   state.players.push({ name, gender, id: Date.now() });
   document.getElementById('newPlayerName').value = '';
   const res = await apiPost('save', state);
-  if (res) { state = res.ok ? state : state; localLastUpdated = Date.now(); }
+  if (res?.state) { state = res.state; localLastUpdated = state.lastUpdated; }
   renderRoster();
+  renderHeaderStatus();
 }
 
 function removePlayer(idx) {
+  if (!ensureEditableLadder()) return;
   if (!confirm(`Remove ${state.players[idx].name}?`)) return;
   state.players.splice(idx, 1);
-  apiPost('save', state).then(res => { if (res) localLastUpdated = Date.now(); });
-  renderRoster();
+  apiPost('save', state).then(res => {
+    if (res?.state) { state = res.state; localLastUpdated = state.lastUpdated; }
+    renderRoster();
+    renderHeaderStatus();
+  });
+}
+
+// Guard: completed ladders are read-only; if no ladder is selected, prompt to create one.
+function ensureEditableLadder() {
+  if (!state.id) {
+    if (confirm('No ladder selected. Create a new one?')) createNewLadder();
+    return false;
+  }
+  if (state.status === 'completed') {
+    alert('This ladder is completed and read-only. Switch to an upcoming/active ladder to edit.');
+    return false;
+  }
+  return true;
 }
 
 function openEdit(idx) {
@@ -843,22 +1205,27 @@ function openEdit(idx) {
 }
 function closeModal() { document.getElementById('editModal').classList.remove('open'); }
 async function saveEdit() {
+  if (!ensureEditableLadder()) return;
   state.players[editingIndex].name = document.getElementById('editName').value.trim();
   state.players[editingIndex].gender = document.getElementById('editGender').value;
   closeModal();
   const res = await apiPost('save', state);
-  if (res) localLastUpdated = Date.now();
+  if (res?.state) { state = res.state; localLastUpdated = state.lastUpdated; }
   renderRoster();
 }
 
 async function clearRoster() {
-  if (!confirm('Clear ALL players and reset tournament?')) return;
+  if (!ensureEditableLadder()) return;
+  if (!confirm(`Clear ALL players and rounds for "${state.name}"?\n\nThe ladder remains in your list but goes back to upcoming with an empty roster.`)) return;
   const res = await apiPost('reset', {});
-  if (res) { const fresh = await apiGet(); if (fresh) { state = fresh; localLastUpdated = fresh.lastUpdated; } }
+  if (res?.state) { state = res.state; localLastUpdated = state.lastUpdated; }
   renderRoster();
+  renderHeaderStatus();
+  renderLadderPicker();
 }
 
 function loadCSV(input) {
+  if (!ensureEditableLadder()) { input.value = ''; return; }
   const file = input.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = async e => {
@@ -870,40 +1237,51 @@ function loadCSV(input) {
       state.players.push({ name: parts[0], gender, id: Date.now() + Math.random() });
     });
     const res = await apiPost('save', state);
-    if (res) localLastUpdated = Date.now();
+    if (res?.state) { state = res.state; localLastUpdated = state.lastUpdated; }
     renderRoster();
+    renderHeaderStatus();
   };
   reader.readAsText(file);
+  input.value = ''; // allow re-uploading the same file
 }
 
 function renderRoster() {
-  const players = state.players;
-  document.getElementById('rosterCount').textContent = players.length;
+  const players = state.players || [];
+  const rosterCountEl = document.getElementById('rosterCount');
+  if (rosterCountEl) rosterCountEl.textContent = players.length;
 
-  // PUBLIC list — name + gender badge, no edit buttons
-  const publicList = document.getElementById('playerList');
-  if (!players.length) {
-    publicList.innerHTML = `<div class="empty-state">
-      <span class="icon">🥒</span>
-      No players loaded yet.<br>
-      <span style="font-size:.78rem;color:var(--muted)">Admin: go to Roster tab → upload CSV or add players manually.</span>
-    </div>`;
-  } else {
-    publicList.innerHTML = players.map(p => `
-      <div class="player-item">
-        <div class="player-badge" style="background:${p.gender==='F'?'#e91e8c':'var(--green)'}">${p.name[0]}</div>
-        <span class="player-name">${p.name}</span>
-        <span class="player-gender">${p.gender==='F'?'♀ F':'♂ M'}</span>
-      </div>`).join('');
+  // Update the roster card title to reflect the currently-viewed ladder.
+  const titleHostEl = document.querySelector('#page-roster .card-title');
+  if (titleHostEl && state.id) {
+    titleHostEl.innerHTML = `👥 ${escapeHtml(state.name)} Roster <span id="rosterCount" class="pill pill-green">${players.length}</span>`;
   }
 
-  // ADMIN list — includes edit/delete buttons
+  // PUBLIC list — only the players in THIS ladder's roster.
+  const publicList = document.getElementById('playerList');
+  if (publicList) {
+    if (!players.length) {
+      publicList.innerHTML = `<div class="empty-state">
+        <span class="icon">🥒</span>
+        ${state.id ? 'No players in this ladder yet.' : 'No ladder selected yet.'}<br>
+        <span style="font-size:.78rem;color:var(--muted)">${state.status === 'completed' ? 'This ladder is completed and read-only.' : 'Admin: upload a CSV or add players manually.'}</span>
+      </div>`;
+    } else {
+      publicList.innerHTML = players.map(p => `
+        <div class="player-item">
+          <div class="player-badge" style="background:${p.gender==='F'?'#e91e8c':'var(--green)'}">${escapeHtml(p.name?.[0] || '?')}</div>
+          <span class="player-name">${escapeHtml(p.name)}</span>
+          <span class="player-gender">${p.gender==='F'?'♀ F':'♂ M'}</span>
+        </div>`).join('');
+    }
+  }
+
+  // ADMIN list — same set, with edit/delete affordances.
   const adminList = document.getElementById('playerListAdmin');
   if (adminList) {
     adminList.innerHTML = players.length ? players.map((p,i) => `
       <div class="player-item">
-        <div class="player-badge" style="background:${p.gender==='F'?'#e91e8c':'var(--green)'}">${p.name[0]}</div>
-        <span class="player-name">${p.name}</span>
+        <div class="player-badge" style="background:${p.gender==='F'?'#e91e8c':'var(--green)'}">${escapeHtml(p.name?.[0] || '?')}</div>
+        <span class="player-name">${escapeHtml(p.name)}</span>
         <span class="player-gender">${p.gender==='F'?'♀':'♂'}</span>
         <button class="btn btn-ghost btn-sm" onclick="openEdit(${i})">✏️</button>
         <button class="btn btn-sm" style="background:#fde8e8;color:var(--red);border:none" onclick="removePlayer(${i})">✕</button>
@@ -911,10 +1289,9 @@ function renderRoster() {
     : '<div class="empty-state"><span class="icon">🥒</span>No players yet.</div>';
   }
 
-  if (state.rounds[0]) {
-    document.getElementById('assignmentsCard').style.display = 'block';
-    renderAssignments(state.rounds[0].courts);
-  }
+  // NOTE: we deliberately do NOT auto-show the assignments card here.
+  // The card surfaces only when admin clicks Auto-Assign or uses Manual mode.
+  // This is what stops "adding the roster" from looking like the ladder has started.
 }
 
 // ════════════════════════════════════════════
@@ -964,13 +1341,16 @@ function renderAssignments(courts) {
 }
 
 async function startTourney() {
+  if (!ensureEditableLadder()) return;
   if (!state.rounds[0]) return alert('Assign courts first!');
-  state.tourneyStarted = true;
-  state.currentRound = 0;
-  const res = await apiPost('save', state);
-  if (res) localLastUpdated = Date.now();
+  // Promote this ladder to active on the server (this also demotes any other active ladder).
+  const res = await apiPost('startLadder', { id: state.id });
+  if (!res?.ok) return;
+  if (res.ladder) { state = res.ladder; localLastUpdated = state.lastUpdated; }
   showPageDirect('tourney');
   renderTourney();
+  renderHeaderStatus();
+  renderLadderPicker();
 }
 
 // ════════════════════════════════════════════
@@ -1160,7 +1540,7 @@ function prevRound() {
 }
 
 function finishTourney() {
-  alert('🏆 Tournament Complete! Check the Stats tab for final standings.');
+  alert('🏆 Tournament Complete! Check the Stats tab for final standings.\n\nWhen ready, hit "🏁 Finish Ladder" below to archive it to Completed Ladders.');
   showPageDirect('stats'); renderStats();
 }
 
@@ -1903,18 +2283,26 @@ async function applyManualAssign() {
 }
 async function init() {
   showSyncBar(true);
-  const data = await apiGet();
-  if (data) { state = data; localLastUpdated = data.lastUpdated; }
+  // 1) Pull the ladders index so we know what exists.
+  const idx = await apiGetIndex();
+  if (idx) laddersIndex = idx;
+  // 2) Pick which ladder to view (active > upcoming > most recent).
+  viewingLadderId = pickViewingLadderId();
+  // 3) Pull that ladder's full state.
+  await loadActiveLadder();
   showSyncBar(false);
   showPageDirect('tourney');
   renderRoster();
   applyAdminState();
   renderAdminStatus();
   renderTourney();
+  renderHeaderStatus();
+  renderLadderPicker();
   startPolling();
 }
 
 init();
+// Ladders refactor: per-ladder blobs + index (PR1) + Ladders tab w/ Upcoming/Completed sections (PR2).
 </script>
 </body>
 </html>
