@@ -1,0 +1,2036 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🥒 SB Pickle Friends Spring Bash</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green:#2d7a3a; --green-light:#4caf63; --green-pale:#e8f5eb;
+  --yellow:#f4c430; --yellow-dark:#d4a320;
+  --red:#d63031; --blue:#2471a3;
+  --court-bg:#1a6b3a; --bg:#f0f7f1; --card:#ffffff;
+  --text:#1a2e1d; --muted:#6b8f71; --border:#c8e0cc;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,var(--green) 0%,#1e5a28 100%);padding:14px 16px 0;text-align:center;box-shadow:0 3px 12px rgba(0,0,0,.2);position:sticky;top:0;z-index:100}
+.header-row{display:flex;align-items:center;justify-content:center;gap:8px}
+.header h1{font-family:'Fredoka One',cursive;color:var(--yellow);font-size:1.35rem;letter-spacing:1px;text-shadow:2px 2px 0 rgba(0,0,0,.3)}
+.header p{color:#b8dbb9;font-size:.72rem;margin-top:2px}
+.tabs{display:flex;gap:3px;margin-top:10px;justify-content:center;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:0}
+.tab{background:rgba(255,255,255,.15);color:rgba(255,255,255,.7);border:none;padding:7px 12px;border-radius:10px 10px 0 0;font-family:'Nunito',sans-serif;font-weight:700;font-size:.78rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+.tab.active{background:var(--bg);color:var(--green)}
+.tab:hover:not(.active){background:rgba(255,255,255,.25);color:white}
+.admin-bar{background:linear-gradient(90deg,#1a3a1e,#2d7a3a,#1a3a1e);color:var(--yellow);font-size:.72rem;font-weight:700;text-align:center;padding:5px;letter-spacing:1px;display:none}
+.admin-bar.visible{display:block}
+.sync-bar{background:#1565c0;color:white;font-size:.72rem;font-weight:700;text-align:center;padding:4px;display:none}
+.sync-bar.visible{display:block}
+
+/* PAGES */
+.page{display:none;padding:14px;max-width:700px;margin:0 auto}
+.page.active{display:block}
+
+/* CARDS */
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);border:1px solid var(--border)}
+.card-title{font-family:'Fredoka One',cursive;font-size:1.05rem;color:var(--green);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:9px 16px;border-radius:10px;border:none;font-family:'Nunito',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer;transition:all .15s}
+.btn:active{transform:scale(.97)}
+.btn-green{background:var(--green);color:white}.btn-green:hover{background:var(--green-light)}
+.btn-yellow{background:var(--yellow);color:var(--text)}.btn-yellow:hover{background:var(--yellow-dark)}
+.btn-red{background:var(--red);color:white}.btn-red:hover{opacity:.85}
+.btn-blue{background:var(--blue);color:white}
+.btn-sm{padding:5px 11px;font-size:.78rem}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--green-pale);color:var(--green)}
+
+/* FORMS */
+input,select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:'Nunito',sans-serif;font-size:.88rem;color:var(--text);background:#fafffe;outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--green-light)}
+label{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px;display:block}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+
+/* PLAYER LIST */
+.player-list{display:flex;flex-direction:column;gap:5px}
+.player-item{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--green-pale);border-radius:9px;border:1px solid var(--border)}
+.player-badge{width:30px;height:30px;border-radius:50%;color:white;font-weight:800;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.player-name{flex:1;font-weight:700;font-size:.88rem}
+.player-gender{font-size:.72rem;font-weight:700;padding:2px 7px;border-radius:20px;background:white;border:1px solid var(--border);color:var(--muted)}
+
+/* TOURNAMENT */
+.round-header{background:linear-gradient(135deg,var(--green) 0%,#2d6a35 100%);color:white;border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.round-header h2{font-family:'Fredoka One',cursive;font-size:1.15rem;color:var(--yellow)}
+.timer-disp{font-family:'Fredoka One',cursive;font-size:1.45rem;color:white;background:rgba(0,0,0,.25);padding:4px 12px;border-radius:20px}
+.timer-bar{background:#d0e8d4;border-radius:8px;height:7px;margin-bottom:10px;overflow:hidden}
+.timer-fill{height:100%;background:var(--green);border-radius:8px;transition:width 1s linear,background .5s}
+
+.court-card{background:var(--card);border-radius:13px;padding:13px;margin-bottom:9px;border:2px solid var(--border);transition:border-color .2s}
+.court-card.scored{border-color:var(--green-light)}
+.court-card.my-court{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(244,196,48,.25)}
+.court-num{font-family:'Fredoka One',cursive;font-size:.95rem;color:var(--green);margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.court-icon{width:26px;height:26px;background:var(--court-bg);border-radius:5px;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:.72rem;font-weight:800}
+.teams-row{display:grid;grid-template-columns:1fr auto 1fr;gap:7px;align-items:center}
+.team-box{background:var(--green-pale);border-radius:9px;padding:8px;text-align:center;border:1px solid var(--border)}
+.team-names{font-size:.78rem;font-weight:700;line-height:1.5;min-height:36px;display:flex;flex-direction:column;justify-content:center}
+.vs-badge{font-family:'Fredoka One',cursive;color:var(--muted);font-size:.95rem;text-align:center}
+.score-row{display:flex;gap:7px;margin-top:7px;align-items:center}
+.score-row input{text-align:center;font-size:1.35rem;font-weight:800;padding:5px}
+.score-lbl{font-size:.72rem;font-weight:700;color:var(--muted);text-align:center;margin-top:2px}
+.winner-badge{display:inline-block;background:var(--yellow);color:var(--text);font-size:.68rem;font-weight:800;padding:2px 7px;border-radius:20px;margin-top:3px}
+.saved-badge{display:inline-block;background:#e8f5e9;color:#2e7d32;font-size:.68rem;font-weight:800;padding:2px 7px;border-radius:20px;border:1px solid #a5d6a7}
+
+/* STATS */
+.stat-chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.stat-chip{background:white;border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;text-align:center;flex:1;min-width:70px}
+.stat-chip .num{font-family:'Fredoka One',cursive;font-size:1.5rem;color:var(--green);line-height:1}
+.stat-chip .lbl{font-size:.68rem;color:var(--muted);font-weight:700}
+.standings-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.standings-table th{background:var(--green);color:white;padding:7px 9px;text-align:left;font-size:.72rem;letter-spacing:.5px}
+.standings-table th:first-child{border-radius:8px 0 0 0}.standings-table th:last-child{border-radius:0 8px 0 0}
+.standings-table td{padding:7px 9px;border-bottom:1px solid var(--border)}
+.standings-table tr:nth-child(even) td{background:var(--green-pale)}
+.standings-table tr:hover td{background:#d5edda}
+.rank-1 td:first-child{color:#d4af37;font-size:.95rem}
+.rank-2 td:first-child{color:#aaa;font-size:.95rem}
+.rank-3 td:first-child{color:#cd7f32;font-size:.95rem}
+.podium-row td{font-weight:800}
+.progress-row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.progress-name{font-size:.78rem;font-weight:700;width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.progress-bar-wrap{flex:1;background:var(--border);border-radius:20px;height:13px;overflow:hidden}
+.progress-bar-fill{height:100%;background:var(--green);border-radius:20px;transition:width .5s}
+.progress-val{font-size:.78rem;font-weight:800;color:var(--green);width:32px;text-align:right}
+
+/* ALERTS */
+.alert{padding:9px 13px;border-radius:10px;font-size:.83rem;font-weight:700;margin-bottom:10px}
+.alert-info{background:#e3f2fd;color:#1565c0;border:1px solid #90caf9}
+.alert-success{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
+.alert-warn{background:#fff8e1;color:#f57f17;border:1px solid #ffe082}
+
+/* PILLS */
+.pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:700}
+.pill-green{background:var(--green-pale);color:var(--green);border:1px solid var(--green-light)}
+.pill-yellow{background:#fff8e1;color:#7d5a00;border:1px solid var(--yellow)}
+
+/* ASSIGN GRID */
+.assign-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.assign-cell{background:var(--green-pale);border-radius:9px;padding:9px;border:1px solid var(--border)}
+.assign-court{font-family:'Fredoka One',cursive;color:var(--green);font-size:.88rem;margin-bottom:3px}
+.assign-players{font-size:.75rem;font-weight:700;line-height:1.6}
+
+/* UPLOAD AREA */
+.upload-area{border:2px dashed var(--border);border-radius:12px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;transition:all .2s;margin-bottom:9px}
+.upload-area:hover{border-color:var(--green);color:var(--green);background:var(--green-pale)}
+.upload-area .icon{font-size:1.8rem;display:block;margin-bottom:5px}
+
+/* LOCK / PIN */
+.lock-screen{display:none;position:fixed;inset:0;background:linear-gradient(160deg,#1a3a1e 0%,#0d2410 100%);z-index:300;flex-direction:column;align-items:center;justify-content:center;padding:30px}
+.lock-screen.open{display:flex}
+.lock-logo{font-size:3rem;margin-bottom:7px;animation:bounce 1s ease infinite alternate}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-7px)}}
+.lock-title{font-family:'Fredoka One',cursive;color:var(--yellow);font-size:1.5rem;margin-bottom:3px;text-align:center}
+.lock-sub{color:#7db882;font-size:.83rem;margin-bottom:24px;text-align:center}
+.pin-display{display:flex;gap:12px;margin-bottom:22px}
+.pin-dot{width:17px;height:17px;border-radius:50%;border:2px solid #4caf63;background:transparent;transition:background .15s}
+.pin-dot.filled{background:var(--yellow);border-color:var(--yellow)}
+.pin-dot.error{background:var(--red);border-color:var(--red);animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,68px);gap:9px}
+.pin-key{height:60px;border-radius:13px;border:2px solid #2d5c33;background:#1e4a24;color:white;font-family:'Fredoka One',cursive;font-size:1.4rem;cursor:pointer;transition:all .1s;display:flex;align-items:center;justify-content:center}
+.pin-key:active,.pin-key:hover{background:#2d7a3a;border-color:var(--green-light);transform:scale(.95)}
+.pin-key.del{font-size:1rem;color:#f4c430}
+.pin-key.cancel{font-size:.8rem;color:#aaa;background:#151f16}
+.pin-error-msg{color:#ff6b6b;font-size:.83rem;font-weight:700;margin-top:14px;min-height:18px;text-align:center}
+
+/* LOCKED OVERLAY */
+.locked-overlay{position:relative}
+.lock-gate{position:absolute;inset:0;background:rgba(240,247,241,.93);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--green);font-size:.88rem;border-radius:14px;cursor:pointer;backdrop-filter:blur(2px);z-index:10;flex-direction:column;gap:7px}
+.locked-overlay.unlocked .lock-gate{display:none}
+
+/* ADMIN STATUS BAR */
+.admin-status-bar{display:flex;align-items:center;justify-content:space-between;background:#fff8e1;border:1.5px solid var(--yellow);border-radius:10px;padding:7px 13px;margin-bottom:10px;font-size:.8rem;font-weight:700;color:#7d5a00}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-title{font-family:'Fredoka One',cursive;font-size:1.15rem;color:var(--green);margin-bottom:13px}
+
+/* COURT MAP */
+.map-section{margin-bottom:14px}
+.map-title{font-family:'Fredoka One',cursive;font-size:1rem;color:var(--green);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.court-map-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.map-court{border-radius:10px;padding:10px;border:2px solid var(--border);background:white;cursor:pointer;transition:all .2s;position:relative}
+.map-court:hover{border-color:var(--green-light);background:var(--green-pale)}
+.map-court.active-court{border-color:var(--yellow);background:#fff8e1;box-shadow:0 0 0 3px rgba(244,196,48,.2)}
+.map-court.top-court{border-color:#d4af37;background:linear-gradient(135deg,#fff8e1,#fef3c7)}
+.map-court-num{font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--green);margin-bottom:4px}
+.map-court.top-court .map-court-num{color:#92660a}
+.map-court-players{font-size:.72rem;font-weight:700;line-height:1.6;color:var(--text)}
+.map-court-score{font-family:'Fredoka One',cursive;font-size:.85rem;margin-top:4px;color:var(--muted)}
+.map-court-score.has-score{color:var(--green)}
+.movement-legend{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.75rem;font-weight:700}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.movement-info{background:var(--green-pale);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:.82rem;margin-top:10px}
+.move-arrow{display:inline-block;font-size:1rem;margin:0 3px}
+
+/* LIVE DOT */
+.live-dot{display:inline-block;width:8px;height:8px;background:#4caf63;border-radius:50%;animation:pulse 1.5s infinite;margin-right:4px;vertical-align:middle}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+
+.flex-between{display:flex;align-items:center;justify-content:space-between}
+.flex-gap{display:flex;gap:7px;flex-wrap:wrap}
+.mt-8{margin-top:8px}.mt-12{margin-top:12px}
+.text-sm{font-size:.8rem}.text-muted{color:var(--muted)}.text-center{text-align:center}
+.empty-state{text-align:center;color:var(--muted);padding:28px 18px;font-size:.88rem}
+.empty-state .icon{font-size:2.2rem;display:block;margin-bottom:7px}
+.section-title{font-family:'Fredoka One',cursive;color:var(--green);font-size:.92rem;margin-bottom:7px;display:flex;align-items:center;gap:5px}
+
+@media(max-width:400px){.form-row{grid-template-columns:1fr}.assign-grid{grid-template-columns:1fr}.court-map-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-row">
+    <h1>🥒 SB Pickle Friends Spring Bash</h1>
+    <button id="adminLockBtn" onclick="handleAdminBtn()" title="Admin login"
+      style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;font-size:.95rem;color:rgba(255,255,255,.6);transition:all .2s">🔒</button>
+  </div>
+  <p id="headerStatus"><span class="live-dot"></span>Live • 8 Courts • 32 Players • 8 Rounds</p>
+  <div class="tabs">
+    <button class="tab active" id="tab-tourney" onclick="showPage('tourney',event)">🏆 Play</button>
+    <button class="tab"        id="tab-map"     onclick="showPage('map',event)">🗺 Court Map</button>
+    <button class="tab"        id="tab-stats"   onclick="showPage('stats',event)">📊 Stats</button>
+    <button class="tab"        id="tab-rules"   onclick="showPage('rules',event)">📋 Rules</button>
+    <button class="tab"        id="tab-roster"  onclick="showPage('roster',event)">👥 Roster</button>
+    <button class="tab"        id="tab-ladders" onclick="showPage('ladders',event)">🪜 Ladders</button>
+  </div>
+</div>
+<div class="admin-bar" id="adminBar">
+  🔓 ADMIN MODE &nbsp;|&nbsp; Ladder:
+  <select id="tourneySelect" onchange="switchLadder(this.value)"
+    style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:6px;padding:2px 6px;font-size:.72rem;font-family:'Nunito',sans-serif;font-weight:700">
+    <option value="">— loading —</option>
+  </select>
+  &nbsp;|&nbsp; <span style="cursor:pointer;text-decoration:underline" onclick="lockAdmin()">Lock</span>
+</div>
+<div class="sync-bar" id="syncBar">⏳ Syncing with server...</div>
+
+<!-- ══════════ ROSTER PAGE ══════════ -->
+<div class="page" id="page-roster">
+  <div id="adminStatusRoster"></div>
+
+  <!-- PUBLIC: everyone sees the player list -->
+  <div class="card">
+    <div class="flex-between" style="margin-bottom:9px">
+      <div class="card-title" style="margin-bottom:0">👥 Roster <span id="rosterCount" class="pill pill-green">0</span></div>
+    </div>
+    <div id="playerList" class="player-list">
+      <div class="empty-state"><span class="icon">🥒</span>Loading...</div>
+    </div>
+  </div>
+
+  <!-- ADMIN ONLY: add/edit/delete/assign -->
+  <div class="locked-overlay" id="rosterAdminSection">
+    <div class="lock-gate" onclick="openLockScreen()">
+      <span style="font-size:1.8rem">🔒</span>
+      <span>Admin — edit roster &amp; assign courts</span>
+      <span style="font-size:.72rem;font-weight:600;color:var(--muted)">Tap to unlock</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📤 Add / Edit Players</div>
+      <div class="upload-area" onclick="document.getElementById('csvInput').click()">
+        <span class="icon">📂</span>
+        <strong>Upload CSV Roster</strong>
+        <div class="text-sm mt-8">CSV columns: Name, Gender (M/F)</div>
+      </div>
+      <input type="file" id="csvInput" accept=".csv,.txt" style="display:none" onchange="loadCSV(this)">
+      <div style="text-align:center;color:var(--muted);font-size:.78rem;margin:7px 0">— or add manually —</div>
+      <div class="form-row">
+        <div><label>Full Name</label><input type="text" id="newPlayerName" placeholder="First Last" onkeydown="if(event.key==='Enter')addPlayer()"></div>
+        <div><label>Gender</label>
+          <select id="newPlayerGender">
+            <option value="F">♀ Female</option>
+            <option value="M">♂ Male</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="addPlayer()" style="width:100%">➕ Add Player</button>
+    </div>
+
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:9px">
+        <div class="card-title" style="margin-bottom:0">⚙️ Manage</div>
+        <div class="flex-gap">
+          <button class="btn btn-red btn-sm" onclick="clearRoster()">🗑 Reset</button>
+        </div>
+      </div>
+      <div id="playerListAdmin" class="player-list"></div>
+    </div>
+
+    <!-- Assignment mode picker -->
+    <div class="card" id="assignModeCard">
+      <div class="card-title">🎾 Court Assignments</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <button id="btnModeAuto" onclick="setAssignMode('auto')"
+          style="padding:14px 8px;border-radius:12px;border:2px solid var(--green);background:var(--green);color:white;font-family:'Fredoka One',cursive;font-size:.95rem;cursor:pointer;text-align:center;transition:all .2s">
+          🎲 Random<br><span style="font-size:.7rem;font-weight:400;opacity:.85">Auto-assign coed teams</span>
+        </button>
+        <button id="btnModeManual" onclick="setAssignMode('manual')"
+          style="padding:14px 8px;border-radius:12px;border:2px solid var(--border);background:white;color:var(--text);font-family:'Fredoka One',cursive;font-size:.95rem;cursor:pointer;text-align:center;transition:all .2s">
+          ✏️ Manual<br><span style="font-size:.7rem;font-weight:400;opacity:.7">Pick players per court</span>
+        </button>
+      </div>
+
+      <!-- AUTO mode -->
+      <div id="autoAssignSection">
+        <div class="alert alert-info" style="font-size:.78rem">Randomly pairs players coed. Court 8 = top court 🏆</div>
+        <button class="btn btn-green" onclick="shuffleAndAssign()" style="width:100%;margin-top:8px">🎲 Auto-Assign All Courts</button>
+      </div>
+
+      <!-- MANUAL mode -->
+      <div id="manualAssignSection" style="display:none">
+        <div class="alert alert-warn" style="font-size:.78rem">Assign each court manually. All 4 slots must be filled to start.</div>
+        <div style="margin:10px 0 6px">
+          <label>Number of Courts</label>
+          <select id="manualNumCourts" onchange="renderManualAssign()">
+            <option value="4">4 Courts (16 players)</option>
+            <option value="5">5 Courts (20 players)</option>
+            <option value="6">6 Courts (24 players)</option>
+            <option value="7">7 Courts (28 players)</option>
+            <option value="8" selected>8 Courts (32 players)</option>
+          </select>
+        </div>
+        <div id="manualAssignGrid"></div>
+        <div class="alert alert-info mt-8" style="font-size:.75rem" id="manualUnassignedAlert"></div>
+      </div>
+    </div>
+
+    <!-- Preview of assignments -->
+    <div class="card" id="assignmentsCard" style="display:none">
+      <div class="card-title" id="assignmentsCardTitle">🎲 Round 1 Court Assignments</div>
+      <div id="assignmentsGrid" class="assign-grid"></div>
+      <div class="mt-12 flex-gap">
+        <button class="btn btn-yellow" id="reshuffleBtn" onclick="shuffleAndAssign()" style="flex:1">🔀 Re-shuffle</button>
+        <button class="btn btn-green" onclick="startTourney()" style="flex:1">🏁 Start Tournament!</button>
+      </div>
+    </div>
+  </div><!-- /rosterAdminSection -->
+</div>
+
+<!-- ══════════ LADDERS PAGE ══════════ -->
+<div class="page" id="page-ladders">
+  <div id="adminStatusLadders"></div>
+
+  <!-- Active ladder card -->
+  <div class="card" id="laddersActiveCard" style="border-color:var(--green-light);background:linear-gradient(180deg,#eef9f0 0%,white 100%)">
+    <div class="card-title">🟢 Active Ladder</div>
+    <div id="laddersActiveBody" class="empty-state"><span class="icon">🥒</span>No active ladder right now.</div>
+  </div>
+
+  <!-- Upcoming ladders -->
+  <div class="card">
+    <div class="flex-between" style="margin-bottom:9px">
+      <div class="card-title" style="margin-bottom:0">🟡 Upcoming Ladders <span id="upcomingCount" class="pill pill-yellow">0</span></div>
+      <button class="btn btn-green btn-sm" id="newLadderBtnInline" onclick="createNewLadder()" style="display:none">＋ New Ladder</button>
+    </div>
+    <div id="upcomingList"><div class="empty-state"><span class="icon">📋</span>No upcoming ladders. Admin can create one.</div></div>
+  </div>
+
+  <!-- Completed ladders -->
+  <div class="card">
+    <div class="card-title">⚪ Completed Ladders <span id="completedCount" class="pill" style="background:#eef0f2;color:#6b8f71;border:1px solid var(--border)">0</span></div>
+    <div id="completedList"><div class="empty-state"><span class="icon">🏁</span>No completed ladders yet.</div></div>
+  </div>
+
+  <!-- Help text -->
+  <div class="card" style="background:#f8fbf9">
+    <div style="font-size:.82rem;line-height:1.7;color:var(--muted)">
+      <p>🟢 <strong>Active</strong> = the ladder being played right now. Public viewers see this by default.</p>
+      <p>🟡 <strong>Upcoming</strong> = roster is being prepped. Not visible to the public until activated.</p>
+      <p>⚪ <strong>Completed</strong> = past ladder, read-only. Tap to browse standings.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TOURNAMENT PAGE ══════════ -->
+<div class="page active" id="page-tourney">
+  <div id="adminStatusTourney"></div>
+
+  <div id="tourneyWelcome" class="card text-center" style="padding:28px">
+    <div style="font-size:2.8rem">🥒</div>
+    <h2 style="font-family:'Fredoka One',cursive;color:var(--green);margin:7px 0">Ready to Play!</h2>
+    <p class="text-muted text-sm">Add players in Roster, assign courts, then start.</p>
+    <button class="btn btn-green mt-12" onclick="showPageDirect('roster')">👥 Go to Roster</button>
+  </div>
+
+  <div id="tourneyActive" style="display:none">
+    <!-- Timer + Game Controls -->
+    <div class="round-header">
+      <div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.7);font-weight:700">CURRENT ROUND</div>
+        <h2 id="roundTitle">Round 1</h2>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.6)" id="roundSubtitle">Game 1 of 8</div>
+      </div>
+      <div style="text-align:right">
+        <div id="countdownTimer" class="timer-disp">12:00</div>
+        <div style="font-size:.65rem;color:rgba(255,255,255,.5);margin-top:2px" id="timerStatus">Ready to start</div>
+      </div>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+
+    <!-- Big game control buttons — visible to everyone -->
+    <div id="gameControls" style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="btnStart" onclick="startGame()"
+        style="flex:2;padding:14px;border-radius:12px;border:none;background:var(--green);color:white;font-family:'Fredoka One',cursive;font-size:1.1rem;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.15)">
+        ▶ Start Game
+      </button>
+      <button id="btnPause" onclick="pauseGame()"
+        style="flex:1;padding:14px;border-radius:12px;border:none;background:#f57c00;color:white;font-family:'Fredoka One',cursive;font-size:1rem;cursor:pointer;display:none">
+        ⏸ Pause
+      </button>
+      <button id="btnFinish" onclick="finishGame()"
+        style="flex:1;padding:14px;border-radius:12px;border:none;background:var(--red);color:white;font-family:'Fredoka One',cursive;font-size:1rem;cursor:pointer">
+        🏁 Finish
+      </button>
+    </div>
+
+    <!-- PUBLIC: court display visible to everyone -->
+    <div id="publicCourtView"></div>
+
+    <!-- ADMIN: score entry + controls -->
+    <div class="locked-overlay" id="tourneyAdminSection">
+      <div class="lock-gate" onclick="openLockScreen()">
+        <span style="font-size:1.8rem">🔒</span>
+        <span>Admin — tap to enter scores</span>
+        <span style="font-size:.72rem;font-weight:600;color:var(--muted)">Tap to unlock</span>
+      </div>
+      <div id="courtCards"></div>
+
+      <!-- Admin override tools -->
+      <div class="card" style="margin-top:12px;border-color:#ffe082">
+        <div class="card-title" style="color:#f57f17">⚙️ Admin Overrides</div>
+        <div class="flex-gap">
+          <button class="btn btn-sm" style="background:#fff8e1;color:#7d5a00;border:1px solid #ffe082;flex:1" onclick="openMoveModal()">🔀 Move Player</button>
+          <button class="btn btn-sm" style="background:#fff8e1;color:#7d5a00;border:1px solid #ffe082;flex:1" onclick="openReshuffleConfirm()">🎲 Re-shuffle Round</button>
+        </div>
+        <div class="text-muted text-sm mt-8">Tap any court's ✏️ button above to edit pairings.</div>
+      </div>
+
+      <div class="card" style="margin-top:8px">
+        <div class="flex-gap">
+          <button class="btn btn-ghost" style="flex:1" onclick="prevRound()">← Prev Round</button>
+          <button class="btn btn-green" style="flex:1" id="nextRoundBtn" onclick="nextRound()">Next Round →</button>
+        </div>
+        <div class="flex-gap mt-12">
+          <button class="btn btn-sm" style="flex:1;background:#fde8e8;color:var(--red);border:1px solid #f5b7b1" onclick="finishLadder()">🏁 Finish Ladder (mark completed)</button>
+        </div>
+      </div>
+    </div><!-- /tourneyAdminSection -->
+  </div>
+</div>
+
+<!-- ══════════ COURT MAP PAGE ══════════ -->
+<div class="page" id="page-map">
+  <div class="card">
+    <div class="card-title">🗺 Live Court Map</div>
+    <div class="alert alert-info" id="mapRoundInfo">Waiting for tournament to start...</div>
+
+    <div class="movement-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Winners move UP ↑</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Losers move DOWN ↓</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Court 8 = Top court 🏆</div>
+    </div>
+
+    <!-- Visual ladder diagram -->
+    <div id="ladderDiagram" style="margin-bottom:12px"></div>
+
+    <!-- Court-by-court detail -->
+    <div class="section-title">🏟 All Courts This Round</div>
+    <div class="court-map-grid" id="mapCourtGrid">
+      <div class="empty-state" style="grid-column:1/-1"><span class="icon">🎾</span>Tournament not started yet.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔄 Movement Rules</div>
+    <div style="font-size:.85rem;line-height:1.8">
+      <p>🏆 <strong>Winners</strong> move <span style="color:var(--green);font-weight:800">UP one court</span> (Court 8 stays)</p>
+      <p>⬇️ <strong>Non-winners</strong> move <span style="color:var(--red);font-weight:800">DOWN one court</span> (Court 1 stays)</p>
+      <p class="mt-8">🔀 Partners <strong>split</strong> and play with new partners each round</p>
+      <p>🟢 <strong>Coed pairing</strong> takes priority over the split rule</p>
+      <p class="mt-8">⭐ <strong>After Rounds 1–4:</strong> Game 5 placement is based on cumulative score — everyone re-seeds!</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🥇 How to Win</div>
+    <div style="font-size:.85rem;line-height:2">
+      <p>🥇 <strong>1st:</strong> Winners of Court 8 in the final round</p>
+      <p>🥈 <strong>2nd:</strong> Non-winners of Court 8 in the final round</p>
+      <p>🥉 <strong>3rd:</strong> Winners of Court 7 in the final round</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ STATS PAGE ══════════ -->
+<div class="page" id="page-stats">
+  <div class="stat-chips">
+    <div class="stat-chip"><div class="num" id="statRounds">0</div><div class="lbl">Rounds</div></div>
+    <div class="stat-chip"><div class="num" id="statGames">0</div><div class="lbl">Games</div></div>
+    <div class="stat-chip"><div class="num" id="statPlayers">0</div><div class="lbl">Players</div></div>
+    <div class="stat-chip"><div class="num" id="statHigh">0</div><div class="lbl">High Score</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🏆 Standings</div>
+    <div style="overflow-x:auto">
+      <table class="standings-table">
+        <thead><tr><th>#</th><th>Player</th><th>W</th><th>L</th><th>T</th><th>Pts+</th><th>Pts-</th><th>Diff</th><th>Best</th></tr></thead>
+        <tbody id="standingsBody"><tr><td colspan="9" class="empty-state">No games yet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📈 Points Scored</div>
+    <div id="pointsBars"><div class="empty-state"><span class="icon">📊</span>Appears after games.</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🎖 Podium</div>
+    <div id="podium" class="text-center"><div class="empty-state"><span class="icon">🥇</span>Finish tournament to see results.</div></div>
+  </div>
+</div>
+
+<!-- ══════════ RULES PAGE ══════════ -->
+<div class="page" id="page-rules">
+  <div class="card">
+    <div class="card-title">📋 Event Overview</div>
+    <div style="font-size:.86rem;line-height:1.7">
+      <div class="flex-between" style="padding:5px 0;border-bottom:1px solid var(--border)"><span class="text-muted">🕒 Start</span><strong>3:00 PM SHARP</strong></div>
+      <div class="flex-between" style="padding:5px 0;border-bottom:1px solid var(--border)"><span class="text-muted">🎾 Courts</span><strong>8 courts, 32 players</strong></div>
+      <div class="flex-between" style="padding:5px 0;border-bottom:1px solid var(--border)"><span class="text-muted">⏱ Round</span><strong>12 minutes per game</strong></div>
+      <div class="flex-between" style="padding:5px 0;border-bottom:1px solid var(--border)"><span class="text-muted">⏸ Break</span><strong>3 min between games</strong></div>
+      <div class="flex-between" style="padding:5px 0;border-bottom:1px solid var(--border)"><span class="text-muted">🔄 Rounds</span><strong>8 total</strong></div>
+      <div class="flex-between" style="padding:5px 0"><span class="text-muted">⏰ Duration</span><strong>~2 hours</strong></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⏱ Each Round</div>
+    <div style="font-size:.86rem;line-height:1.9">
+      <p>• Players decide themselves who serves first</p>
+      <p>• Play <strong>12 minutes regardless of score</strong></p>
+      <p>• You will receive a <strong>warning at minute 11</strong></p>
+      <p>• When the 12-minute signal sounds, <strong>finish the ball in progress</strong></p>
+      <p>• <strong>If tied when horn blows: do NOT count the final point</strong></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🪜 After Each Round</div>
+    <div style="font-size:.86rem;line-height:1.9">
+      <p>⬆️ <strong>Winners</strong> move up one court (Court 8 stays)</p>
+      <p>⬇️ <strong>Non-winners</strong> move down one court (Court 1 stays)</p>
+      <p>🔀 When partners move, they <strong>split and play with new partners</strong></p>
+      <p>🟢 <strong>Coed teams are preferred</strong> over the split requirement</p>
+    </div>
+    <div class="alert alert-warn mt-8">
+      ⭐ <strong>Game 5 exception:</strong> Courts are assigned based on cumulative points from Rounds 1–4. Everyone re-seeds!
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🥇 How to Win</div>
+    <div style="font-size:.86rem;line-height:2">
+      <p>🥇 <strong>1st:</strong> Winners of Court 8 in the final round</p>
+      <p>🥈 <strong>2nd:</strong> Non-winners of Court 8 in the final round</p>
+      <p>🥉 <strong>3rd:</strong> Winners of Court 7 in the final round</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📐 Basic Rules</div>
+    <div style="font-size:.86rem;line-height:1.9">
+      <p>• Receiving team makes the line calls</p>
+      <p>• May opt for input from opponents or a <strong>do-over</strong></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🪆 Gnome Facts</div>
+    <div class="alert alert-warn">🍄 Ball dribbles over the net and hits the base = <strong>do-over!</strong></div>
+    <div class="alert alert-info">🚻 Bathroom break? Raise your hand — a proxy (with far less talent) will play in your absence. Hurry back… no pressure!</div>
+  </div>
+</div>
+
+<!-- EDIT PLAYER MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Player</div>
+    <div class="form-row">
+      <div><label>Name</label><input type="text" id="editName"></div>
+      <div><label>Gender</label>
+        <select id="editGender"><option value="F">♀ Female</option><option value="M">♂ Male</option></select>
+      </div>
+    </div>
+    <div class="flex-gap mt-12">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT COURT / PAIRING MODAL -->
+<div class="modal-overlay" id="courtEditModal">
+  <div class="modal">
+    <div class="modal-title">🏟 Edit Court <span id="courtEditNum"></span></div>
+    <div class="alert alert-warn" style="font-size:.78rem">Changes apply to the current round only.</div>
+
+    <div id="courtEditSlots"></div>
+
+    <div class="flex-gap mt-12">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeCourtModal()">Cancel</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveCourtEdit()">✅ Save Court</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOVE PLAYER MODAL -->
+<div class="modal-overlay" id="moveModal">
+  <div class="modal">
+    <div class="modal-title">🔀 Move Player to Different Court</div>
+    <div style="margin-bottom:10px">
+      <label>Player</label>
+      <select id="movePlayerSel" style="margin-bottom:10px"></select>
+      <label>Move to Court</label>
+      <select id="moveCourtSel"></select>
+      <label style="margin-top:10px">Place as</label>
+      <select id="moveSlotSel">
+        <option value="t1p1">Team A — Player 1</option>
+        <option value="t1p2">Team A — Player 2</option>
+        <option value="t2p1">Team B — Player 1</option>
+        <option value="t2p2">Team B — Player 2</option>
+      </select>
+    </div>
+    <div class="flex-gap mt-12">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeMoveModal()">Cancel</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveMovePlayer()">Move Player</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN LOCK SCREEN -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-logo">🥒</div>
+  <div class="lock-title">Admin Access</div>
+  <div class="lock-sub">Enter your 4-digit PIN</div>
+  <div class="pin-display">
+    <div class="pin-dot" id="dot0"></div><div class="pin-dot" id="dot1"></div>
+    <div class="pin-dot" id="dot2"></div><div class="pin-dot" id="dot3"></div>
+  </div>
+  <div class="pin-keypad">
+    <button class="pin-key" onclick="pinPress('1')">1</button>
+    <button class="pin-key" onclick="pinPress('2')">2</button>
+    <button class="pin-key" onclick="pinPress('3')">3</button>
+    <button class="pin-key" onclick="pinPress('4')">4</button>
+    <button class="pin-key" onclick="pinPress('5')">5</button>
+    <button class="pin-key" onclick="pinPress('6')">6</button>
+    <button class="pin-key" onclick="pinPress('7')">7</button>
+    <button class="pin-key" onclick="pinPress('8')">8</button>
+    <button class="pin-key" onclick="pinPress('9')">9</button>
+    <button class="pin-key cancel" onclick="closeLockScreen()">✕ Cancel</button>
+    <button class="pin-key" onclick="pinPress('0')">0</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+  </div>
+  <div class="pin-error-msg" id="pinError"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// CONFIG — update ADMIN_PIN to match your Netlify env var
+// ════════════════════════════════════════════
+const ADMIN_PIN = '2626'; // must match ADMIN_PIN in Netlify env vars
+const POLL_INTERVAL = 5000; // ms between server polls
+
+// ════════════════════════════════════════════
+// LADDERS MODEL
+// ════════════════════════════════════════════
+// Server now stores a ladders-index + per-ladder blobs. The frontend tracks:
+//   laddersIndex.activeId     → which ladder the public sees by default
+//   viewingLadderId           → which ladder this client is currently viewing
+//   state                     → that ladder's full state
+//
+// `viewingLadderId` defaults to activeId. Admin can switch via the dropdown
+// to view/edit upcoming or completed ladders. Adding/uploading roster only
+// mutates state.players — it never flips state.tourneyStarted or touches rounds.
+let laddersIndex = { activeId: null, ladders: [], lastUpdated: 0 };
+let viewingLadderId = null;
+
+function ladderEntry(id) {
+  return laddersIndex.ladders.find(l => l.id === id) || null;
+}
+
+async function switchLadder(id) {
+  if (!isAdmin) return;
+  if (id === '__new__') { await createNewLadder(); return; }
+  if (!id || id === viewingLadderId) return;
+  viewingLadderId = id;
+  localLastUpdated = 0;
+  state = { id, players: [], rounds: [], currentRound: 0, tourneyStarted: false, lastUpdated: 0 };
+  await loadActiveLadder();
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+}
+
+async function createNewLadder() {
+  const proposed = `Ladder ${(laddersIndex.ladders.length || 0) + 1}`;
+  const name = (prompt('Name for the new ladder?', proposed) || '').trim();
+  if (!name) { renderLadderPicker(); return; }
+  const res = await apiPost('createLadder', { name });
+  if (!res?.ok) { renderLadderPicker(); return; }
+  if (res.index) laddersIndex = res.index;
+  viewingLadderId = res.ladder.id;
+  state = res.ladder;
+  localLastUpdated = state.lastUpdated;
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+}
+
+// ════════════════════════════════════════════
+// STATE — currently-viewed ladder
+// ════════════════════════════════════════════
+let state = {
+  id: null, name: '', status: 'none',
+  players: [], rounds: [], currentRound: 0,
+  tourneyStarted: false, lastUpdated: 0
+};
+let localLastUpdated = 0;
+let isAdmin = false;
+let pinEntry = '';
+let timerInterval = null;
+let timerSeconds = 720;
+let timerRunning = false;
+let editingIndex = null;
+let pollTimer = null;
+
+// ════════════════════════════════════════════
+// API HELPERS
+// ════════════════════════════════════════════
+async function apiGetIndex() {
+  try {
+    const r = await fetch(`/api?action=index`);
+    if (!r.ok) throw new Error('Server error');
+    return await r.json();
+  } catch(e) {
+    console.warn('API index GET failed', e);
+    return null;
+  }
+}
+
+async function apiGetLadder(id) {
+  try {
+    const qs = id ? `&ladder=${encodeURIComponent(id)}` : '';
+    const r = await fetch(`/api?action=state${qs}`);
+    if (!r.ok) throw new Error('Server error');
+    return await r.json();
+  } catch(e) {
+    console.warn('API ladder GET failed, using local state', e);
+    return null;
+  }
+}
+
+async function apiPost(action, body) {
+  try {
+    showSyncBar(true);
+    // Most actions target the currently-viewed ladder; createLadder/setActive use body.id.
+    const targetId = body?.id || viewingLadderId;
+    const ladderQs = targetId && action !== 'createLadder' ? `&ladder=${encodeURIComponent(targetId)}` : '';
+    const r = await fetch(`/api?action=${action}${ladderQs}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-pin': ADMIN_PIN },
+      body: JSON.stringify(body || {})
+    });
+    const data = await r.json();
+    showSyncBar(false);
+    if (!r.ok) throw new Error(data.error || 'Server error');
+    // Many actions return the latest index; keep local copy in sync.
+    if (data.index) laddersIndex = data.index;
+    return data;
+  } catch(e) {
+    showSyncBar(false);
+    console.error('API POST failed:', e);
+    alert('❌ Save failed: ' + e.message + '\n\nCheck your internet connection.');
+    return null;
+  }
+}
+
+// Decide which ladder to view by default.
+// Priority: active → most recent completed → most recent upcoming.
+// (Public viewers should stay on the last completed ladder while admin
+// preps an upcoming one — the upcoming ladder is half-built and not
+// meant for public eyes until the admin explicitly starts it.)
+function pickViewingLadderId() {
+  if (laddersIndex.activeId) return laddersIndex.activeId;
+  const completed = laddersIndex.ladders
+    .filter(l => l.status === 'completed')
+    .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+  if (completed.length) return completed[0].id;
+  const upcoming = laddersIndex.ladders
+    .filter(l => l.status === 'upcoming')
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  if (upcoming.length) return upcoming[0].id;
+  return null;
+}
+
+async function loadActiveLadder() {
+  if (!viewingLadderId) {
+    state = { id: null, name: '', status: 'none', players: [], rounds: [], currentRound: 0, tourneyStarted: false, lastUpdated: 0 };
+    localLastUpdated = 0;
+    return;
+  }
+  const data = await apiGetLadder(viewingLadderId);
+  if (data) {
+    state = data;
+    localLastUpdated = data.lastUpdated || 0;
+  }
+}
+
+function showSyncBar(on) {
+  document.getElementById('syncBar').classList.toggle('visible', on);
+}
+
+// ════════════════════════════════════════════
+// POLLING — refresh index + currently-viewed ladder every 5s
+// ════════════════════════════════════════════
+async function pollServer() {
+  const idx = await apiGetIndex();
+  if (idx) {
+    const newActive = idx.activeId !== laddersIndex.activeId;
+    laddersIndex = idx;
+    // If admin hasn't picked a specific ladder, follow activeId.
+    if (!viewingLadderId || (newActive && viewingLadderId !== idx.activeId && !isAdmin)) {
+      viewingLadderId = pickViewingLadderId();
+      await loadActiveLadder();
+      refreshAllViews();
+      renderHeaderStatus();
+      renderLadderPicker();
+      return;
+    }
+    renderLadderPicker();
+  }
+  const data = await apiGetLadder(viewingLadderId);
+  if (data && data.lastUpdated !== localLastUpdated) {
+    localLastUpdated = data.lastUpdated;
+    state = data;
+    refreshAllViews();
+    renderHeaderStatus();
+  }
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(pollServer, POLL_INTERVAL);
+}
+
+function refreshAllViews() {
+  renderRoster();
+  // Only re-render tourney/map/stats/ladders if their page is active
+  const activePage = document.querySelector('.page.active')?.id;
+  if (activePage === 'page-tourney') renderTourney();
+  if (activePage === 'page-map') renderMap();
+  if (activePage === 'page-stats') renderStats();
+  if (activePage === 'page-ladders') renderLadders();
+}
+
+// Header sub-line reflects the currently-viewed ladder + its status.
+function renderHeaderStatus() {
+  const el = document.getElementById('headerStatus');
+  if (!el) return;
+  if (!state.id) {
+    el.innerHTML = `<span style="color:#ffe082;font-weight:800">No ladder yet</span> &nbsp;·&nbsp; admin can create one`;
+    return;
+  }
+  const courts = state.rounds[0]?.courts?.length || 8;
+  const playerCount = state.players?.length || 0;
+  if (state.status === 'active') {
+    el.innerHTML = `<span class="live-dot"></span><strong>${escapeHtml(state.name)}</strong> · LIVE · ${courts} Courts · ${playerCount} Players`;
+  } else if (state.status === 'upcoming') {
+    el.innerHTML = `<span style="color:#ffe082;font-weight:800">UPCOMING</span> · <strong>${escapeHtml(state.name)}</strong> · ${playerCount} Players`;
+  } else if (state.status === 'completed') {
+    el.innerHTML = `<span style="color:#b8dbb9">COMPLETED</span> · <strong>${escapeHtml(state.name)}</strong> · ${playerCount} Players · read-only`;
+  } else {
+    el.innerHTML = `<strong>${escapeHtml(state.name || 'Ladder')}</strong>`;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Rebuilds the admin ladder dropdown from laddersIndex.
+function renderLadderPicker() {
+  const sel = document.getElementById('tourneySelect');
+  if (!sel) return;
+  const opts = laddersIndex.ladders.map(l => {
+    const tag = l.status === 'active' ? '🟢' : l.status === 'upcoming' ? '🟡' : '⚪';
+    return `<option value="${l.id}" ${l.id === viewingLadderId ? 'selected' : ''}>${tag} ${escapeHtml(l.name)}${l.status==='active'?' (LIVE)':l.status==='upcoming'?' (upcoming)':' (completed)'}</option>`;
+  }).join('');
+  sel.innerHTML = opts + `<option value="__new__">＋ New Ladder…</option>`;
+}
+
+// ════════════════════════════════════════════
+// LADDERS PAGE
+// ════════════════════════════════════════════
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function renderLadders() {
+  const ladders = laddersIndex.ladders || [];
+  const active = ladders.filter(l => l.status === 'active');
+  const upcoming = ladders.filter(l => l.status === 'upcoming')
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const completed = ladders.filter(l => l.status === 'completed')
+    .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+
+  // Show/hide the "+ New Ladder" inline button based on admin state
+  const newBtn = document.getElementById('newLadderBtnInline');
+  if (newBtn) newBtn.style.display = isAdmin ? '' : 'none';
+
+  // ── Active card ──
+  const activeBody = document.getElementById('laddersActiveBody');
+  if (activeBody) {
+    if (!active.length) {
+      activeBody.className = 'empty-state';
+      activeBody.innerHTML = `<span class="icon">🥒</span>No active ladder right now.${isAdmin ? '<br><span style="font-size:.78rem">Activate an upcoming ladder below, or create one.</span>' : ''}`;
+    } else {
+      const l = active[0];
+      const isViewing = l.id === viewingLadderId;
+      activeBody.className = '';
+      activeBody.innerHTML = `
+        <div class="player-item" style="background:white;border:2px solid var(--green-light);padding:12px">
+          <div style="flex:1">
+            <div style="font-family:'Fredoka One',cursive;color:var(--green);font-size:1.05rem">${escapeHtml(l.name)}</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:2px">Started ${fmtDate(l.createdAt)} · <span class="live-dot"></span>LIVE</div>
+          </div>
+          ${isViewing
+            ? `<span class="pill pill-green">Viewing</span>`
+            : `<button class="btn btn-ghost btn-sm" onclick="viewLadder('${l.id}')">View</button>`}
+          ${isAdmin ? `<button class="btn btn-sm" style="background:#fde8e8;color:var(--red);border:1px solid #f5b7b1" onclick="finishLadder('${l.id}')">🏁 Finish</button>` : ''}
+        </div>`;
+    }
+  }
+
+  // ── Upcoming list ──
+  const upcomingCountEl = document.getElementById('upcomingCount');
+  if (upcomingCountEl) upcomingCountEl.textContent = upcoming.length;
+  const upcomingList = document.getElementById('upcomingList');
+  if (upcomingList) {
+    if (!upcoming.length) {
+      upcomingList.innerHTML = `<div class="empty-state"><span class="icon">📋</span>No upcoming ladders.${isAdmin ? ' Tap ＋ New Ladder above.' : ''}</div>`;
+    } else {
+      upcomingList.innerHTML = upcoming.map(l => {
+        const isViewing = l.id === viewingLadderId;
+        return `
+          <div class="player-item" style="padding:12px">
+            <div style="flex:1">
+              <div style="font-weight:800;font-size:.95rem">${escapeHtml(l.name)}</div>
+              <div style="font-size:.72rem;color:var(--muted);margin-top:2px">Created ${fmtDate(l.createdAt)}</div>
+            </div>
+            ${isViewing
+              ? `<span class="pill pill-yellow">Editing</span>`
+              : `<button class="btn btn-ghost btn-sm" onclick="viewLadder('${l.id}')">${isAdmin ? 'Edit' : 'View'}</button>`}
+            ${isAdmin ? `
+              <button class="btn btn-green btn-sm" onclick="activateLadder('${l.id}')">▶ Activate</button>
+              <button class="btn btn-sm" style="background:#fde8e8;color:var(--red);border:none" onclick="deleteLadderConfirm('${l.id}','${escapeHtml(l.name).replace(/'/g, "\\'")}')">🗑</button>
+            ` : ''}
+          </div>`;
+      }).join('');
+    }
+  }
+
+  // ── Completed list ──
+  const completedCountEl = document.getElementById('completedCount');
+  if (completedCountEl) completedCountEl.textContent = completed.length;
+  const completedList = document.getElementById('completedList');
+  if (completedList) {
+    if (!completed.length) {
+      completedList.innerHTML = `<div class="empty-state"><span class="icon">🏁</span>No completed ladders yet.</div>`;
+    } else {
+      completedList.innerHTML = completed.map(l => {
+        const isViewing = l.id === viewingLadderId;
+        return `
+          <div class="player-item" style="padding:12px">
+            <div style="flex:1">
+              <div style="font-weight:800;font-size:.95rem">${escapeHtml(l.name)}</div>
+              <div style="font-size:.72rem;color:var(--muted);margin-top:2px">Completed ${fmtDate(l.completedAt)}</div>
+            </div>
+            ${isViewing
+              ? `<span class="pill" style="background:#eef0f2;color:#6b8f71;border:1px solid var(--border)">Viewing</span>`
+              : `<button class="btn btn-ghost btn-sm" onclick="viewLadder('${l.id}')">View</button>`}
+          </div>`;
+      }).join('');
+    }
+  }
+}
+
+// Switch viewing to a different ladder (works for everyone — public can browse completed too).
+async function viewLadder(id) {
+  if (!id || id === viewingLadderId) return;
+  viewingLadderId = id;
+  localLastUpdated = 0;
+  state = { id, players: [], rounds: [], currentRound: 0, tourneyStarted: false, lastUpdated: 0 };
+  await loadActiveLadder();
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+  renderLadders();
+  // Bring the user to a sensible page based on the ladder's status.
+  if (state.status === 'active' || state.status === 'completed') {
+    showPageDirect('tourney');
+  }
+}
+
+// Admin: promote an upcoming ladder to active. Demotes any prior active to completed (server side).
+async function activateLadder(id) {
+  if (!isAdmin) return;
+  const entry = laddersIndex.ladders.find(l => l.id === id);
+  if (!entry) return;
+  const prevActive = laddersIndex.ladders.find(l => l.status === 'active');
+  const msg = prevActive && prevActive.id !== id
+    ? `Activate "${entry.name}"?\n\nThis will mark "${prevActive.name}" as completed.`
+    : `Activate "${entry.name}"?`;
+  if (!confirm(msg)) return;
+  const res = await apiPost('setActive', { id });
+  if (!res?.ok) return;
+  if (res.ladder) { state = res.ladder; localLastUpdated = state.lastUpdated; viewingLadderId = res.ladder.id; }
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+  renderLadders();
+}
+
+// Admin: mark the currently-active ladder (or any ladder) as completed.
+async function finishLadder(id) {
+  if (!isAdmin) return;
+  const targetId = id || state.id;
+  const entry = laddersIndex.ladders.find(l => l.id === targetId);
+  if (!entry) return;
+  if (!confirm(`Finish "${entry.name}"?\n\nIt will move to Completed Ladders (read-only).`)) return;
+  const res = await apiPost('completeLadder', { id: targetId });
+  if (!res?.ok) return;
+  if (res.ladder && res.ladder.id === viewingLadderId) {
+    state = res.ladder;
+    localLastUpdated = state.lastUpdated;
+  }
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+  renderLadders();
+}
+
+// Admin: delete an upcoming ladder.
+async function deleteLadderConfirm(id, name) {
+  if (!isAdmin) return;
+  if (!confirm(`Delete upcoming ladder "${name}"?\n\nThis cannot be undone.`)) return;
+  const res = await apiPost('deleteLadder', { id });
+  if (!res?.ok) return;
+  // If we were viewing the deleted one, fall back to the public default.
+  if (viewingLadderId === id) {
+    viewingLadderId = pickViewingLadderId();
+    await loadActiveLadder();
+  }
+  refreshAllViews();
+  renderHeaderStatus();
+  renderLadderPicker();
+  renderLadders();
+}
+
+// ════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════
+function showPage(p, evt) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  const t = evt ? evt.target : document.getElementById('tab-' + p);
+  if (t) t.classList.add('active');
+  if (p === 'stats') renderStats();
+  if (p === 'tourney') renderTourney();
+  if (p === 'map') renderMap();
+  if (p === 'ladders') renderLadders();
+  renderAdminStatus();
+}
+
+function showPageDirect(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  const t = document.getElementById('tab-' + p);
+  if (t) t.classList.add('active');
+  renderAdminStatus();
+}
+
+// ════════════════════════════════════════════
+// ADMIN / PIN
+// ════════════════════════════════════════════
+function handleAdminBtn() {
+  if (isAdmin) { lockAdmin(); return; }
+  openLockScreen();
+}
+function openLockScreen() {
+  pinEntry = '';
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+  document.getElementById('lockScreen').classList.add('open');
+}
+function closeLockScreen() {
+  document.getElementById('lockScreen').classList.remove('open');
+  pinEntry = ''; updatePinDots();
+}
+function pinPress(d) {
+  if (pinEntry.length >= 4) return;
+  pinEntry += d; updatePinDots();
+  if (pinEntry.length === 4) setTimeout(checkPin, 150);
+}
+function pinDel() {
+  pinEntry = pinEntry.slice(0,-1); updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('dot'+i);
+    d.classList.toggle('filled', i < pinEntry.length);
+    d.classList.remove('error');
+  }
+}
+function checkPin() {
+  if (pinEntry === ADMIN_PIN) {
+    isAdmin = true; closeLockScreen(); applyAdminState();
+  } else {
+    for (let i = 0; i < 4; i++) {
+      const d = document.getElementById('dot'+i);
+      d.classList.remove('filled'); d.classList.add('error');
+    }
+    document.getElementById('pinError').textContent = '❌ Incorrect PIN — try again';
+    setTimeout(() => { pinEntry = ''; updatePinDots(); document.getElementById('pinError').textContent = ''; }, 1200);
+  }
+}
+function lockAdmin() { isAdmin = false; applyAdminState(); }
+function applyAdminState() {
+  const btn = document.getElementById('adminLockBtn');
+  btn.textContent = isAdmin ? '🔓' : '🔒';
+  btn.style.color = isAdmin ? 'var(--yellow)' : 'rgba(255,255,255,.6)';
+  document.getElementById('adminBar').classList.toggle('visible', isAdmin);
+  document.getElementById('rosterAdminSection')?.classList.toggle('unlocked', isAdmin);
+  document.getElementById('tourneyAdminSection')?.classList.toggle('unlocked', isAdmin);
+  renderAdminStatus();
+  if (isAdmin) renderLadderPicker();
+  // Re-render ladders so admin-only controls (New, Activate, Delete, Finish) appear or hide
+  if (document.querySelector('.page.active')?.id === 'page-ladders') renderLadders();
+}
+function renderAdminStatus() {
+  const html = isAdmin
+    ? `<div class="admin-status-bar">🔓 Admin Mode <button class="btn btn-sm" style="background:#fde8e8;color:var(--red);border:none" onclick="lockAdmin()">🔒 Lock</button></div>`
+    : `<div class="admin-status-bar" style="background:#f0f7f1;border-color:var(--border);color:var(--muted)">🔒 View only &nbsp;·&nbsp; <span style="cursor:pointer;text-decoration:underline;color:var(--green)" onclick="openLockScreen()">Admin login</span></div>`;
+  ['adminStatusRoster','adminStatusTourney','adminStatusLadders'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+}
+
+// ════════════════════════════════════════════
+// ROSTER
+// ════════════════════════════════════════════
+//
+// Adding/uploading/removing players ONLY mutates state.players for the
+// currently-viewed ladder. It must NEVER touch tourneyStarted, rounds, or
+// scores — those flip only when admin explicitly starts the ladder.
+async function addPlayer() {
+  if (!ensureEditableLadder()) return;
+  const name = document.getElementById('newPlayerName').value.trim();
+  const gender = document.getElementById('newPlayerGender').value;
+  if (!name) return alert('Enter a player name!');
+  state.players.push({ name, gender, id: Date.now() });
+  document.getElementById('newPlayerName').value = '';
+  const res = await apiPost('save', state);
+  if (res?.state) { state = res.state; localLastUpdated = state.lastUpdated; }
+  renderRoster();
+  renderHeaderStatus();
+}
+
+function removePlayer(idx) {
+  if (!ensureEditableLadder()) return;
+  if (!confirm(`Remove ${state.players[idx].name}?`)) return;
+  state.players.splice(idx, 1);
+  apiPost('save', state).then(res => {
+    if (res?.state) { state = res.state; localLastUpdated = state.lastUpdated; }
+    renderRoster();
+    renderHeaderStatus();
+  });
+}
+
+// Guard: completed ladders are read-only; if no ladder is selected, prompt to create one.
+function ensureEditableLadder() {
+  if (!state.id) {
+    if (confirm('No ladder selected. Create a new one?')) createNewLadder();
+    return false;
+  }
+  if (state.status === 'completed') {
+    alert('This ladder is completed and read-only. Switch to an upcoming/active ladder to edit.');
+    return false;
+  }
+  return true;
+}
+
+function openEdit(idx) {
+  editingIndex = idx;
+  document.getElementById('editName').value = state.players[idx].name;
+  document.getElementById('editGender').value = state.players[idx].gender;
+  document.getElementById('editModal').classList.add('open');
+}
+function closeModal() { document.getElementById('editModal').classList.remove('open'); }
+async function saveEdit() {
+  if (!ensureEditableLadder()) return;
+  state.players[editingIndex].name = document.getElementById('editName').value.trim();
+  state.players[editingIndex].gender = document.getElementById('editGender').value;
+  closeModal();
+  const res = await apiPost('save', state);
+  if (res?.state) { state = res.state; localLastUpdated = state.lastUpdated; }
+  renderRoster();
+}
+
+async function clearRoster() {
+  if (!ensureEditableLadder()) return;
+  if (!confirm(`Clear ALL players and rounds for "${state.name}"?\n\nThe ladder remains in your list but goes back to upcoming with an empty roster.`)) return;
+  const res = await apiPost('reset', {});
+  if (res?.state) { state = res.state; localLastUpdated = state.lastUpdated; }
+  renderRoster();
+  renderHeaderStatus();
+  renderLadderPicker();
+}
+
+function loadCSV(input) {
+  if (!ensureEditableLadder()) { input.value = ''; return; }
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    lines.forEach(line => {
+      const parts = line.split(',').map(p => p.trim());
+      if (!parts[0] || parts[0].toLowerCase() === 'name') return;
+      const gender = (parts[1]||'F').toUpperCase().startsWith('M') ? 'M' : 'F';
+      state.players.push({ name: parts[0], gender, id: Date.now() + Math.random() });
+    });
+    const res = await apiPost('save', state);
+    if (res?.state) { state = res.state; localLastUpdated = state.lastUpdated; }
+    renderRoster();
+    renderHeaderStatus();
+  };
+  reader.readAsText(file);
+  input.value = ''; // allow re-uploading the same file
+}
+
+function renderRoster() {
+  const players = state.players || [];
+  const rosterCountEl = document.getElementById('rosterCount');
+  if (rosterCountEl) rosterCountEl.textContent = players.length;
+
+  // Update the roster card title to reflect the currently-viewed ladder.
+  const titleHostEl = document.querySelector('#page-roster .card-title');
+  if (titleHostEl && state.id) {
+    titleHostEl.innerHTML = `👥 ${escapeHtml(state.name)} Roster <span id="rosterCount" class="pill pill-green">${players.length}</span>`;
+  }
+
+  // PUBLIC list — only the players in THIS ladder's roster.
+  const publicList = document.getElementById('playerList');
+  if (publicList) {
+    if (!players.length) {
+      publicList.innerHTML = `<div class="empty-state">
+        <span class="icon">🥒</span>
+        ${state.id ? 'No players in this ladder yet.' : 'No ladder selected yet.'}<br>
+        <span style="font-size:.78rem;color:var(--muted)">${state.status === 'completed' ? 'This ladder is completed and read-only.' : 'Admin: upload a CSV or add players manually.'}</span>
+      </div>`;
+    } else {
+      publicList.innerHTML = players.map(p => `
+        <div class="player-item">
+          <div class="player-badge" style="background:${p.gender==='F'?'#e91e8c':'var(--green)'}">${escapeHtml(p.name?.[0] || '?')}</div>
+          <span class="player-name">${escapeHtml(p.name)}</span>
+          <span class="player-gender">${p.gender==='F'?'♀ F':'♂ M'}</span>
+        </div>`).join('');
+    }
+  }
+
+  // ADMIN list — same set, with edit/delete affordances.
+  const adminList = document.getElementById('playerListAdmin');
+  if (adminList) {
+    adminList.innerHTML = players.length ? players.map((p,i) => `
+      <div class="player-item">
+        <div class="player-badge" style="background:${p.gender==='F'?'#e91e8c':'var(--green)'}">${escapeHtml(p.name?.[0] || '?')}</div>
+        <span class="player-name">${escapeHtml(p.name)}</span>
+        <span class="player-gender">${p.gender==='F'?'♀':'♂'}</span>
+        <button class="btn btn-ghost btn-sm" onclick="openEdit(${i})">✏️</button>
+        <button class="btn btn-sm" style="background:#fde8e8;color:var(--red);border:none" onclick="removePlayer(${i})">✕</button>
+      </div>`).join('')
+    : '<div class="empty-state"><span class="icon">🥒</span>No players yet.</div>';
+  }
+
+  // NOTE: we deliberately do NOT auto-show the assignments card here.
+  // The card surfaces only when admin clicks Auto-Assign or uses Manual mode.
+  // This is what stops "adding the roster" from looking like the ladder has started.
+}
+
+// ════════════════════════════════════════════
+// COURT ASSIGNMENTS
+// ════════════════════════════════════════════
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+async function shuffleAndAssign() {
+  if (state.players.length < 4) return alert('Need at least 4 players!');
+  const females = shuffle(state.players.filter(p => p.gender === 'F'));
+  const males   = shuffle(state.players.filter(p => p.gender === 'M'));
+  const ordered = [];
+  const maxLen = Math.max(females.length, males.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < females.length) ordered.push(females[i]);
+    if (i < males.length)   ordered.push(males[i]);
+  }
+  state.players.filter(p => !ordered.find(o => o.id === p.id)).forEach(p => ordered.push(p));
+  const numCourts = Math.min(8, Math.floor(ordered.length / 4));
+  const courts = [];
+  for (let c = 0; c < numCourts; c++) {
+    courts.push({ court: c+1, team1: [ordered[c*4], ordered[c*4+1]], team2: [ordered[c*4+2], ordered[c*4+3]] });
+  }
+  state.rounds[0] = { courts, scores: {} };
+  const res = await apiPost('save', state);
+  if (res) localLastUpdated = Date.now();
+  renderAssignments(courts);
+  document.getElementById('assignmentsCard').style.display = 'block';
+}
+
+function renderAssignments(courts) {
+  document.getElementById('assignmentsGrid').innerHTML = courts.map(c => `
+    <div class="assign-cell">
+      <div class="assign-court">🏟 Court ${c.court}</div>
+      <div class="assign-players">
+        <span style="color:var(--green)">Team A:</span> ${c.team1.map(p=>p?.name||'?').join(' & ')}<br>
+        <span style="color:var(--blue)">Team B:</span> ${c.team2.map(p=>p?.name||'?').join(' & ')}
+      </div>
+    </div>`).join('');
+}
+
+async function startTourney() {
+  if (!ensureEditableLadder()) return;
+  if (!state.rounds[0]) return alert('Assign courts first!');
+  // Promote this ladder to active on the server (this also demotes any other active ladder).
+  const res = await apiPost('startLadder', { id: state.id });
+  if (!res?.ok) return;
+  if (res.ladder) { state = res.ladder; localLastUpdated = state.lastUpdated; }
+  showPageDirect('tourney');
+  renderTourney();
+  renderHeaderStatus();
+  renderLadderPicker();
+}
+
+// ════════════════════════════════════════════
+// TOURNAMENT
+// ════════════════════════════════════════════
+function renderTourney() {
+  if (!state.tourneyStarted || !state.rounds.length) {
+    document.getElementById('tourneyWelcome').style.display = '';
+    document.getElementById('tourneyActive').style.display = 'none';
+    return;
+  }
+  document.getElementById('tourneyWelcome').style.display = 'none';
+  document.getElementById('tourneyActive').style.display = '';
+
+  const round = state.rounds[state.currentRound];
+  if (!round) return;
+
+  document.getElementById('roundTitle').textContent = `Round ${state.currentRound + 1}`;
+  document.getElementById('roundSubtitle').textContent = `Game ${state.currentRound + 1} of 8`;
+  document.getElementById('nextRoundBtn').textContent =
+    state.currentRound >= 7 ? '🏁 Finish Tournament' : 'Next Round →';
+
+  // ── PUBLIC view — everyone sees this ──────────────────────────────
+  document.getElementById('publicCourtView').innerHTML = round.courts.map((c, ci) => {
+    const sc = round.scores?.[ci] || {};
+    const t1 = sc.t1 ?? null; const t2 = sc.t2 ?? null;
+    const hasScore = t1 !== null && t2 !== null;
+    const winner = hasScore ? (t1 > t2 ? 'A' : t2 > t1 ? 'B' : 'T') : '';
+    const isTop = c.court === round.courts.length;
+
+    return `
+      <div style="background:white;border-radius:13px;padding:12px;margin-bottom:9px;
+        border:2px solid ${hasScore ? 'var(--green-light)' : isTop ? 'var(--yellow)' : 'var(--border)'};
+        box-shadow:0 2px 6px rgba(0,0,0,.06)">
+        <!-- Court header -->
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+          <div style="width:28px;height:28px;background:${isTop?'#d4a320':'var(--court-bg)'};border-radius:6px;
+            display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:.78rem">${c.court}</div>
+          <span style="font-family:'Fredoka One',cursive;font-size:1rem;color:${isTop?'#7d5a00':'var(--green)'}">
+            Court ${c.court}${isTop?' 🏆':''}
+          </span>
+          ${hasScore
+            ? `<span style="margin-left:auto;font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--green);
+                background:var(--green-pale);padding:2px 10px;border-radius:20px">${t1} – ${t2}</span>`
+            : `<span style="margin-left:auto;font-size:.72rem;color:var(--muted);font-weight:700">In progress...</span>`
+          }
+        </div>
+        <!-- Teams -->
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center">
+          <div style="background:${winner==='A'?'#e8f5e9':'var(--green-pale)'};border-radius:9px;padding:8px;text-align:center;
+            border:1.5px solid ${winner==='A'?'var(--green-light)':'var(--border)'}">
+            <div style="font-size:.75rem;font-weight:800;color:var(--green);line-height:1.5">
+              ${c.team1.map(p=>`<div>${p?.name||'?'}</div>`).join('')}
+            </div>
+            ${winner==='A'?'<div style="font-size:.68rem;font-weight:800;color:var(--green);margin-top:3px">🏆 Winners</div>':''}
+          </div>
+          <div style="font-family:\'Fredoka One\',cursive;color:var(--muted);font-size:.9rem;text-align:center">VS</div>
+          <div style="background:${winner==='B'?'#e3f2fd':'#f0f7ff'};border-radius:9px;padding:8px;text-align:center;
+            border:1.5px solid ${winner==='B'?'#90caf9':'#c5d8f0'}">
+            <div style="font-size:.75rem;font-weight:800;color:var(--blue);line-height:1.5">
+              ${c.team2.map(p=>`<div>${p?.name||'?'}</div>`).join('')}
+            </div>
+            ${winner==='B'?'<div style="font-size:.68rem;font-weight:800;color:var(--blue);margin-top:3px">🏆 Winners</div>':''}
+          </div>
+        </div>
+        ${winner==='T'?'<div style="text-align:center;font-size:.75rem;font-weight:700;color:#f57c00;margin-top:6px">⚖️ Tie</div>':''}
+        ${hasScore && winner !== 'T' ? `
+          <div style="margin-top:6px;font-size:.72rem;color:var(--muted);text-align:center">
+            ${getMovementHint(c, winner)}
+          </div>` : ''}
+      </div>`;
+  }).join('');
+
+  // ── ADMIN score entry — only visible when unlocked ─────────────────
+  document.getElementById('courtCards').innerHTML = round.courts.map((c, ci) => {
+    const sc = round.scores?.[ci] || {};
+    const t1 = sc.t1 ?? ''; const t2 = sc.t2 ?? '';
+    const hasScore = t1 !== '' && t2 !== '';
+    const winner = hasScore ? (parseInt(t1) > parseInt(t2) ? 'A' : parseInt(t2) > parseInt(t1) ? 'B' : 'T') : '';
+    return `
+      <div class="court-card ${hasScore?'scored':''}" id="cc-${ci}">
+        <div class="court-num">
+          <div class="court-icon">${c.court}</div>
+          Court ${c.court}
+          ${c.court === round.courts.length ? '<span class="pill pill-yellow" style="margin-left:auto">🏆 Top</span>' : ''}
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="openCourtEdit(${ci})">✏️</button>
+          ${hasScore ? '<span class="saved-badge">✓</span>' : ''}
+        </div>
+        <div class="teams-row">
+          <div class="team-box">
+            <div class="team-names">${c.team1.map(p=>p?.name||'?').join('<br>')}</div>
+            ${winner==='A'?'<div class="winner-badge">🏆 Win</div>':''}
+          </div>
+          <div class="vs-badge">VS</div>
+          <div class="team-box">
+            <div class="team-names">${c.team2.map(p=>p?.name||'?').join('<br>')}</div>
+            ${winner==='B'?'<div class="winner-badge">🏆 Win</div>':''}
+          </div>
+        </div>
+        <div class="score-row">
+          <div style="flex:1">
+            <input type="number" min="0" max="99" placeholder="0" value="${t1}"
+              onchange="submitScore(${ci},'A',this.value)" style="text-align:center;font-size:1.3rem;font-weight:800">
+            <div class="score-lbl">Team A</div>
+          </div>
+          <div style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--muted);padding:0 3px">—</div>
+          <div style="flex:1">
+            <input type="number" min="0" max="99" placeholder="0" value="${t2}"
+              onchange="submitScore(${ci},'B',this.value)" style="text-align:center;font-size:1.3rem;font-weight:800">
+            <div class="score-lbl">Team B</div>
+          </div>
+        </div>
+        ${winner==='T'?'<div class="alert alert-warn" style="margin-top:7px;font-size:.78rem">⚖️ Tie</div>':''}
+      </div>`;
+  }).join('');
+}
+
+function getMovementHint(court, winner) {
+  if (!winner) return '⬆️ Winners move up · ⬇️ Losers move down';
+  const numCourts = state.rounds[state.currentRound]?.courts.length || 8;
+  if (winner === 'T') return '↔️ Tie — all stay on this court';
+  const winNext  = Math.min(numCourts, court.court + 1);
+  const loseNext = Math.max(1, court.court - 1);
+  const wTeam = winner === 'A' ? court.team1 : court.team2;
+  const lTeam = winner === 'A' ? court.team2 : court.team1;
+  return `🏆 ${wTeam.map(p=>p?.name?.split(' ')[0]||'?').join(' & ')} → Court ${winNext} &nbsp;|&nbsp; ${lTeam.map(p=>p?.name?.split(' ')[0]||'?').join(' & ')} → Court ${loseNext}`;
+}
+
+// Score entry — debounced, saves each court individually
+const scoreDebounce = {};
+function submitScore(courtIdx, team, value) {
+  const key = `${state.currentRound}-${courtIdx}`;
+  clearTimeout(scoreDebounce[key]);
+  // Optimistically update local state
+  if (!state.rounds[state.currentRound].scores) state.rounds[state.currentRound].scores = {};
+  if (!state.rounds[state.currentRound].scores[courtIdx]) state.rounds[state.currentRound].scores[courtIdx] = {};
+  state.rounds[state.currentRound].scores[courtIdx][team==='A'?'t1':'t2'] = parseInt(value)||0;
+
+  scoreDebounce[key] = setTimeout(async () => {
+    const sc = state.rounds[state.currentRound].scores[courtIdx];
+    if (sc.t1 !== undefined && sc.t2 !== undefined) {
+      await apiPost('score', {
+        roundIndex: state.currentRound,
+        courtIndex: courtIdx,
+        t1: sc.t1, t2: sc.t2
+      });
+      localLastUpdated = Date.now();
+      renderTourney(); // refresh to show saved badge + hints
+    }
+  }, 800); // wait 800ms after last keystroke
+}
+
+async function nextRound() {
+  const round = state.rounds[state.currentRound];
+  const unscored = round.courts.filter((_,ci) => {
+    const sc = round.scores?.[ci];
+    return !sc || sc.t1 === undefined || sc.t2 === undefined;
+  });
+  if (unscored.length && !confirm(`${unscored.length} court(s) not scored. Continue?`)) return;
+
+  if (state.currentRound >= 7) { finishTourney(); return; }
+
+  // Round 4 → 5 transition: re-seed by cumulative points
+  const nextRoundIdx = state.currentRound + 1;
+  if (nextRoundIdx === 4) { // 0-indexed, so index 4 = Round 5
+    const res = await apiPost('reseed', {});
+    if (res?.state) { state = res.state; localLastUpdated = Date.now(); }
+    resetGameState();
+    renderTourney();
+    // Show re-seed notice
+    setTimeout(() => alert('⭐ Round 5 — Courts re-assigned by cumulative points! Check the new assignments.'), 300);
+    return;
+  }
+
+  const res = await apiPost('advance', {});
+  if (res?.state) { state = res.state; localLastUpdated = Date.now(); }
+  resetGameState();
+  renderTourney();
+}
+
+function prevRound() {
+  if (state.currentRound > 0) {
+    state.currentRound--;
+    apiPost('save', state);
+    renderTourney();
+  }
+}
+
+function finishTourney() {
+  alert('🏆 Tournament Complete! Check the Stats tab for final standings.\n\nWhen ready, hit "🏁 Finish Ladder" below to archive it to Completed Ladders.');
+  showPageDirect('stats'); renderStats();
+}
+
+// ════════════════════════════════════════════
+// COURT MAP — PDF-style H-pattern layout
+// ════════════════════════════════════════════
+function renderMap() {
+  const round = state.rounds[state.currentRound];
+  const mapInfo = document.getElementById('mapRoundInfo');
+  const ladderEl = document.getElementById('ladderDiagram');
+  const gridEl = document.getElementById('mapCourtGrid');
+
+  if (!state.tourneyStarted || !round) {
+    mapInfo.textContent = 'Waiting for tournament to start...';
+    ladderEl.innerHTML = renderPDFMap(null);
+    gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="icon">🎾</span>Tournament not started yet.</div>';
+    return;
+  }
+
+  mapInfo.innerHTML = `<span class="live-dot"></span> <strong>Round ${state.currentRound + 1}</strong> — ${round.courts.length} courts`;
+  ladderEl.innerHTML = renderPDFMap(round);
+
+  // Court detail cards below the map
+  gridEl.innerHTML = round.courts.slice().reverse().map((c, i) => {
+    const ci = round.courts.length - 1 - i;
+    const sc = round.scores?.[ci] || {};
+    const hasScore = sc.t1 !== undefined && sc.t2 !== undefined;
+    const winner = hasScore ? (sc.t1 > sc.t2 ? 'A' : sc.t2 > sc.t1 ? 'B' : 'T') : '';
+    const numCourts = round.courts.length;
+    const winNext  = !winner || winner==='T' ? c.court : Math.min(numCourts, c.court+1);
+    const loseNext = !winner || winner==='T' ? c.court : Math.max(1, c.court-1);
+    const isTop = c.court === numCourts;
+
+    return `
+      <div class="map-court ${isTop?'top-court':''}">
+        <div class="map-court-num">${isTop?'🏆 ':''}Court ${c.court}</div>
+        <div class="map-court-players">
+          <span style="color:var(--green);font-weight:800">A:</span> ${c.team1.map(p=>p?.name||'?').join(' & ')}<br>
+          <span style="color:var(--blue);font-weight:800">B:</span> ${c.team2.map(p=>p?.name||'?').join(' & ')}
+        </div>
+        <div class="map-court-score ${hasScore?'has-score':''}">
+          ${hasScore ? `${sc.t1}–${sc.t2} ${winner==='T'?'(Tie)':winner==='A'?'· A Wins':'· B Wins'}` : 'No score yet'}
+        </div>
+        ${hasScore && winner!=='T' ? `
+          <div style="font-size:.72rem;margin-top:4px;line-height:1.6">
+            <span style="color:var(--green)">↑ Winners → Court ${winNext}</span><br>
+            <span style="color:var(--red)">↓ Losers → Court ${loseNext}</span>
+          </div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function renderPDFMap(round) {
+  const courts = round?.courts || [];
+  const scores = round?.scores || {};
+
+  function getCourtInfo(courtNum) {
+    const c = courts.find(x => x.court === courtNum);
+    if (!c) return { score: '', hasScore: false, winner: '' };
+    const ci = courts.indexOf(c);
+    const sc = scores[ci] || {};
+    const hasScore = sc.t1 !== undefined && sc.t2 !== undefined;
+    const winner = hasScore ? (sc.t1 > sc.t2 ? 'A' : sc.t2 > sc.t1 ? 'B' : 'T') : '';
+    const names = [...c.team1, ...c.team2].filter(Boolean).map(p => p.name.split(' ')[0]).join(', ');
+    return { score: hasScore ? `${sc.t1}–${sc.t2}` : '', hasScore, winner, names };
+  }
+
+  // SVG canvas
+  const W = 500, H = 340;
+
+  // Location boxes
+  const L1 = { x: 12, y: 30, w: 200, h: 270 };
+  const L2 = { x: 288, y: 30, w: 200, h: 270 };
+
+  // Court dimensions
+  const CW = 74, CH = 90;
+
+  // Court positions — matching PDF exactly
+  // Loc1: Court2=top-left, Court1=top-right, Court3=bottom-left, Court4=bottom-right
+  const C2 = { x: L1.x+12, y: L1.y+35 };
+  const C1 = { x: L1.x+L1.w-CW-12, y: L1.y+35 };
+  const C3 = { x: L1.x+12, y: L1.y+L1.h-CH-12 };
+  const C4 = { x: L1.x+L1.w-CW-12, y: L1.y+L1.h-CH-12 };
+
+  // Loc2: Court8=top-left, Court7=top-right, Court5=bottom-left, Court6=bottom-right
+  const C8 = { x: L2.x+12, y: L2.y+35 };
+  const C7 = { x: L2.x+L2.w-CW-12, y: L2.y+35 };
+  const C5 = { x: L2.x+12, y: L2.y+L2.h-CH-12 };
+  const C6 = { x: L2.x+L2.w-CW-12, y: L2.y+L2.h-CH-12 };
+
+  const teal = '#1e9e8a';
+  const tealDark = '#0d6b5c';
+  const courtFill = '#28b5a0';
+  const gold = '#f4c430';
+  const white = '#ffffff';
+
+  // Court box renderer
+  function court(pos, num, label) {
+    const info = getCourtInfo(num);
+    const isTop = num === 8;
+    const bg = isTop ? '#1a4a2e' : courtFill;
+    const borderColor = isTop ? gold : '#15806e';
+    const bw = isTop ? 2.5 : 1.5;
+
+    return `<g>
+      <rect x="${pos.x}" y="${pos.y}" width="${CW}" height="${CH}" rx="5"
+        fill="${bg}" stroke="${borderColor}" stroke-width="${bw}"/>
+      <!-- inner court lines -->
+      <rect x="${pos.x+5}" y="${pos.y+5}" width="${CW-10}" height="${CH-10}"
+        fill="none" stroke="${white}" stroke-width="0.5" opacity="0.25" rx="2"/>
+      <line x1="${pos.x+5}" y1="${pos.y+CH/2}" x2="${pos.x+CW-5}" y2="${pos.y+CH/2}"
+        stroke="${white}" stroke-width="1" opacity="0.4"/>
+      <!-- label -->
+      <rect x="${pos.x+4}" y="${pos.y+4}" width="${CW-8}" height="18" rx="3"
+        fill="${isTop ? gold : tealDark}" opacity="0.9"/>
+      <text x="${pos.x+CW/2}" y="${pos.y+16}"
+        font-family="Fredoka One,cursive" font-size="10.5"
+        fill="${isTop ? tealDark : white}" text-anchor="middle" font-weight="bold">
+        ${label}${isTop ? ' 🏆' : ''}
+      </text>
+      <!-- score -->
+      ${info.hasScore ? `
+        <rect x="${pos.x+4}" y="${pos.y+CH-20}" width="${CW-8}" height="15" rx="3" fill="rgba(0,0,0,0.45)"/>
+        <text x="${pos.x+CW/2}" y="${pos.y+CH-9}"
+          font-family="Fredoka One,cursive" font-size="9"
+          fill="${info.winner==='T'?'#aaa':'#90ee90'}" text-anchor="middle">${info.score}</text>` : ''}
+      <!-- player names -->
+      ${info.names ? `<text x="${pos.x+CW/2}" y="${pos.y+CH/2+8}"
+        font-family="Nunito,sans-serif" font-size="6.5" fill="${white}"
+        text-anchor="middle" opacity="0.75">${info.names.substring(0,22)}</text>` : ''}
+    </g>`;
+  }
+
+  // Arrow helper — clean with arrowhead
+  function arrow(x1, y1, x2, y2, color='#f4c430', thick=3) {
+    const dx = x2-x1, dy = y2-y1;
+    const len = Math.sqrt(dx*dx+dy*dy);
+    if (len < 1) return '';
+    const ux = dx/len, uy = dy/len;
+    const hx = x2-ux*10, hy = y2-uy*10;
+    const px = -uy*5, py = ux*5;
+    return `
+      <line x1="${x1}" y1="${y1}" x2="${hx}" y2="${hy}"
+        stroke="${color}" stroke-width="${thick}" stroke-linecap="round" opacity="0.95"/>
+      <polygon points="${x2},${y2} ${hx+px},${hy+py} ${hx-px},${hy-py}"
+        fill="${color}" opacity="0.95"/>`;
+  }
+
+  // Center X of a court
+  const cx = p => p.x + CW/2;
+  const cy = p => p.y + CH/2;
+  const bot = p => p.y + CH;
+  const top = p => p.y;
+  const right = p => p.x + CW;
+  const left = p => p.x;
+
+  // ── Yellow arrows: the ladder movement path ──────────────────────────
+  // Court 1 → Court 2 (top row, right to left)
+  const arr1 = arrow(left(C1)+8, cy(C1), right(C2)+4, cy(C2), gold, 3);
+  // Court 2 → Court 3 (left column, top to bottom)
+  const arr2 = arrow(cx(C2), bot(C2), cx(C3), top(C3)-4, gold, 3);
+  // Court 3 → Court 4 (bottom row, left to right)
+  const arr3 = arrow(right(C3), cy(C3)+10, left(C4)-4, cy(C4)+10, gold, 3);
+  // Court 4 → Court 5 (crosses locations, bottom row)
+  const arr4 = arrow(right(C4), cy(C4)+10, left(C5)-4, cy(C5)+10, gold, 3);
+  // Court 5 → Court 6 (bottom row loc2, left to right)
+  const arr6 = arrow(right(C5), cy(C5)-10, left(C6)-4, cy(C6)-10, gold, 3);
+  // Court 6 → Court 7 (right column loc2, bottom to top)
+  const arr7 = arrow(cx(C6)+8, top(C6)-4, cx(C7)+8, bot(C7)+4, gold, 3);
+  // Court 7 → Court 8 (top row loc2, right to left)
+  const arr8 = arrow(left(C7)-4, cy(C7), right(C8)+4, cy(C8), gold, 3);
+
+  return `
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:4px">
+  <svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"
+    style="max-width:520px;display:block;margin:0 auto;border-radius:14px;
+    background:linear-gradient(160deg,#0a2e24 0%,#0f3d2e 60%,#0a2a20 100%)">
+
+    <!-- Location 1 -->
+    <rect x="${L1.x}" y="${L1.y}" width="${L1.w}" height="${L1.h}"
+      rx="10" fill="${teal}" opacity="0.18" stroke="${teal}" stroke-width="1" opacity="0.4"/>
+    <text x="${L1.x+L1.w/2}" y="${L1.y+22}"
+      font-family="Fredoka One,cursive" font-size="11" fill="rgba(255,255,255,0.55)" text-anchor="middle">
+      LOCATION 1 (Courts 1–4)
+    </text>
+
+    <!-- Location 2 -->
+    <rect x="${L2.x}" y="${L2.y}" width="${L2.w}" height="${L2.h}"
+      rx="10" fill="${teal}" opacity="0.18" stroke="${teal}" stroke-width="1" opacity="0.4"/>
+    <text x="${L2.x+L2.w/2}" y="${L2.y+22}"
+      font-family="Fredoka One,cursive" font-size="11" fill="rgba(255,255,255,0.55)" text-anchor="middle">
+      LOCATION 2 (Courts 5–8)
+    </text>
+
+    <!-- H-pattern connectors -->
+    <!-- Loc1 vertical center bar -->
+    <rect x="${L1.x+L1.w/2-3}" y="${bot(C2)+2}" width="6" height="${top(C3)-bot(C2)-4}"
+      fill="${teal}" opacity="0.35" rx="3"/>
+    <!-- Loc2 vertical center bar -->
+    <rect x="${L2.x+L2.w/2-3}" y="${bot(C8)+2}" width="6" height="${top(C5)-bot(C8)-4}"
+      fill="${teal}" opacity="0.35" rx="3"/>
+    <!-- Horizontal bridge between locations -->
+    <rect x="${L1.x+L1.w}" y="${H/2-3}" width="${L2.x-L1.x-L1.w}" height="6"
+      fill="${teal}" opacity="0.35" rx="3"/>
+
+    <!-- Courts -->
+    ${court(C2, 2, 'Court 2')}
+    ${court(C1, 1, 'Court 1')}
+    ${court(C3, 3, 'Court 3')}
+    ${court(C4, 4, 'Court 4')}
+    ${court(C8, 8, 'Court 8')}
+    ${court(C7, 7, 'Court 7')}
+    ${court(C5, 5, 'Court 5')}
+    ${court(C6, 6, 'Court 6')}
+
+    <!-- Movement arrows (gold = ladder path) -->
+    ${arr1}${arr2}${arr3}${arr4}${arr6}${arr7}${arr8}
+
+    <!-- Legend -->
+    <g transform="translate(12,${H-22})">
+      <rect width="10" height="10" rx="2" fill="${gold}"/>
+      <text x="14" y="9" font-family="Nunito,sans-serif" font-size="8.5"
+        fill="rgba(255,255,255,0.65)" font-weight="700">Ladder movement path</text>
+      <rect x="160" width="10" height="10" rx="2" fill="${gold}" stroke="${gold}" stroke-width="1.5"/>
+      <rect x="160" y="1" width="10" height="8" rx="1" fill="#1a4a2e"/>
+      <text x="174" y="9" font-family="Nunito,sans-serif" font-size="8.5"
+        fill="rgba(255,255,255,0.65)" font-weight="700">🏆 Top court (Court 8)</text>
+    </g>
+  </svg>
+  </div>`;
+}
+
+// ════════════════════════════════════════════
+// TIMER
+// ════════════════════════════════════════════
+// GAME CONTROLS — Start / Pause / Finish
+// ════════════════════════════════════════════
+let gameState = 'idle'; // idle | running | paused | finished
+
+function startGame() {
+  if (gameState === 'finished') return;
+  if (gameState === 'idle') timerSeconds = 720; // fresh start
+  gameState = 'running';
+  updateGameButtons();
+  timerRunning = true;
+  clearInterval(timerInterval);
+  let warnedAt11 = timerSeconds <= 60; // don't re-warn if resuming inside last minute
+  timerInterval = setInterval(() => {
+    timerSeconds--;
+    // 1-minute warning at exactly 60 seconds left
+    if (timerSeconds === 60 && !warnedAt11) {
+      warnedAt11 = true;
+      document.getElementById('timerStatus').textContent = '⚠️ 1 minute warning!';
+      if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+    }
+    if (timerSeconds <= 0) {
+      timerSeconds = 0;
+      clearInterval(timerInterval);
+      timerRunning = false;
+      gameState = 'finished';
+      updateGameButtons();
+      document.getElementById('countdownTimer').style.color = '#ff6b6b';
+      document.getElementById('timerStatus').textContent = '⏰ Time — finish ball in play!';
+      if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+    }
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function pauseGame() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  gameState = 'paused';
+  updateGameButtons();
+}
+
+function finishGame() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  gameState = 'finished';
+  timerSeconds = 0;
+  document.getElementById('countdownTimer').style.color = '#ff6b6b';
+  updateTimerDisplay();
+  updateGameButtons();
+  document.getElementById('timerStatus').textContent = '🏁 Game over — enter scores below';
+  if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerSeconds = 720;
+  gameState = 'idle';
+  document.getElementById('countdownTimer').style.color = 'white';
+  document.getElementById('timerStatus').textContent = 'Ready to start';
+  updateTimerDisplay();
+  updateGameButtons();
+}
+
+function updateGameButtons() {
+  const btnStart  = document.getElementById('btnStart');
+  const btnPause  = document.getElementById('btnPause');
+  const btnFinish = document.getElementById('btnFinish');
+  if (!btnStart) return;
+
+  if (gameState === 'idle') {
+    btnStart.textContent = '▶ Start Game';
+    btnStart.style.background = 'var(--green)';
+    btnStart.style.display = '';
+    btnPause.style.display = 'none';
+    btnFinish.style.display = '';
+    document.getElementById('timerStatus').textContent = 'Ready to start';
+    document.getElementById('countdownTimer').style.color = 'white';
+  } else if (gameState === 'running') {
+    btnStart.style.display = 'none';
+    btnPause.style.display = '';
+    btnFinish.style.display = '';
+    document.getElementById('timerStatus').textContent = '🟢 Game in progress';
+  } else if (gameState === 'paused') {
+    btnStart.textContent = '▶ Resume';
+    btnStart.style.background = '#f57c00';
+    btnStart.style.display = '';
+    btnPause.style.display = 'none';
+    btnFinish.style.display = '';
+    document.getElementById('timerStatus').textContent = '⏸ Paused';
+  } else if (gameState === 'finished') {
+    btnStart.textContent = '↺ New Game';
+    btnStart.style.background = '#607d8b';
+    btnStart.style.display = '';
+    btnPause.style.display = 'none';
+    btnFinish.style.display = 'none';
+    // Override start to reset
+    btnStart.onclick = () => { resetTimer(); };
+  }
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timerSeconds/60), s = timerSeconds%60;
+  document.getElementById('countdownTimer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  const pct = (timerSeconds/720)*100;
+  const fill = document.getElementById('timerFill');
+  fill.style.width = pct + '%';
+  fill.style.background = timerSeconds < 60 ? '#e53935' : timerSeconds < 180 ? '#f57c00' : 'var(--green)';
+}
+
+// Reset game state when moving to a new round
+function resetGameState() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerSeconds = 720;
+  gameState = 'idle';
+  const timer = document.getElementById('countdownTimer');
+  if (timer) timer.style.color = 'white';
+  updateTimerDisplay();
+  updateGameButtons();
+  // Re-bind start button after reset
+  const btnStart = document.getElementById('btnStart');
+  if (btnStart) btnStart.onclick = startGame;
+}
+
+// ════════════════════════════════════════════
+// STATS
+// ════════════════════════════════════════════
+function renderStats() {
+  const ps = {};
+  state.players.forEach(p => { ps[p.id] = { name:p.name, wins:0, losses:0, ties:0, ptsFor:0, ptsAgainst:0, bestCourt:0 }; });
+  let totalGames = 0, highScore = 0;
+
+  state.rounds.forEach(round => {
+    round.courts?.forEach((c, ci) => {
+      const sc = round.scores?.[ci];
+      if (!sc || sc.t1 === undefined || sc.t2 === undefined) return;
+      totalGames++;
+      highScore = Math.max(highScore, sc.t1, sc.t2);
+      const tied = sc.t1 === sc.t2;
+      [[c.team1, sc.t1, sc.t2, sc.t1 > sc.t2], [c.team2, sc.t2, sc.t1, sc.t2 > sc.t1]].forEach(([team, scored, allowed, won]) => {
+        team.forEach(p => {
+          if (!p || !ps[p.id]) return;
+          ps[p.id].ptsFor += scored; ps[p.id].ptsAgainst += allowed;
+          if (tied) ps[p.id].ties++;
+          else if (won) ps[p.id].wins++;
+          else ps[p.id].losses++;
+          ps[p.id].bestCourt = Math.max(ps[p.id].bestCourt, c.court);
+        });
+      });
+    });
+  });
+
+  document.getElementById('statRounds').textContent = state.tourneyStarted ? state.currentRound + 1 : 0;
+  document.getElementById('statGames').textContent = totalGames;
+  document.getElementById('statPlayers').textContent = state.players.length;
+  document.getElementById('statHigh').textContent = highScore;
+
+  const sorted = Object.values(ps).sort((a,b) => b.wins !== a.wins ? b.wins - a.wins : (b.ptsFor-b.ptsAgainst)-(a.ptsFor-a.ptsAgainst));
+  const medals = ['🥇','🥈','🥉'];
+  const tbody = document.getElementById('standingsBody');
+  if (!sorted.length || sorted.every(p => p.wins+p.losses+p.ties===0)) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No games played yet</td></tr>';
+  } else {
+    tbody.innerHTML = sorted.map((p,i) => {
+      const diff = p.ptsFor - p.ptsAgainst;
+      return `<tr class="${i<3?`rank-${i+1} podium-row`:''}">
+        <td>${medals[i]||i+1}</td><td>${p.name}</td>
+        <td style="color:var(--green);font-weight:800">${p.wins}</td>
+        <td style="color:var(--red)">${p.losses}</td><td>${p.ties}</td>
+        <td>${p.ptsFor}</td><td>${p.ptsAgainst}</td>
+        <td style="font-weight:800;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>0?'+':''}${diff}</td>
+        <td>🏟${p.bestCourt||'—'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const maxPts = Math.max(...sorted.map(p=>p.ptsFor), 1);
+  document.getElementById('pointsBars').innerHTML = sorted.some(p=>p.ptsFor>0)
+    ? sorted.slice(0,12).map(p=>`
+        <div class="progress-row">
+          <div class="progress-name">${p.name}</div>
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${(p.ptsFor/maxPts*100).toFixed(1)}%"></div></div>
+          <div class="progress-val">${p.ptsFor}</div>
+        </div>`).join('')
+    : '<div class="empty-state"><span class="icon">📊</span>Stats appear after games are scored.</div>';
+
+  const podiumEl = document.getElementById('podium');
+  if (sorted.length >= 3 && sorted[0].wins > 0) {
+    podiumEl.innerHTML = `
+      <div style="display:flex;gap:10px;justify-content:center;align-items:flex-end;padding:14px 0">
+        <div style="text-align:center"><div style="font-size:1.8rem">🥈</div>
+          <div style="background:#e0e0e0;padding:28px 10px 9px;border-radius:8px;min-width:75px">
+            <div style="font-weight:800;font-size:.83rem">${sorted[1]?.name||'—'}</div>
+            <div style="font-size:.72rem;color:var(--muted)">${sorted[1]?.wins}W</div></div></div>
+        <div style="text-align:center"><div style="font-size:2.2rem">🥇</div>
+          <div style="background:var(--yellow);padding:36px 10px 9px;border-radius:8px;min-width:85px">
+            <div style="font-weight:800;font-size:.88rem">${sorted[0]?.name||'—'}</div>
+            <div style="font-size:.72rem;color:#7d5a00">${sorted[0]?.wins}W</div></div></div>
+        <div style="text-align:center"><div style="font-size:1.8rem">🥉</div>
+          <div style="background:#ffe0b2;padding:20px 10px 9px;border-radius:8px;min-width:75px">
+            <div style="font-weight:800;font-size:.83rem">${sorted[2]?.name||'—'}</div>
+            <div style="font-size:.72rem;color:#7d5a00">${sorted[2]?.wins}W</div></div></div>
+      </div>`;
+  } else {
+    podiumEl.innerHTML = '<div class="empty-state"><span class="icon">🥇</span>Complete rounds to see standings.</div>';
+  }
+}
+
+// ════════════════════════════════════════════
+// ADMIN OVERRIDES — edit courts, move players, reshuffle
+// ════════════════════════════════════════════
+let editingCourtIdx = null;
+
+function openCourtEdit(courtIdx) {
+  const round = state.rounds[state.currentRound];
+  const court = round.courts[courtIdx];
+  editingCourtIdx = courtIdx;
+  document.getElementById('courtEditNum').textContent = court.court;
+
+  const allNames = state.players.map((p,i) => `<option value="${i}">${p.name} (${p.gender})</option>`).join('');
+  const nobody = `<option value="-1">— Empty —</option>`;
+
+  function slotSelect(label, currentPlayer, selectId) {
+    const currentIdx = currentPlayer ? state.players.findIndex(p => p.id === currentPlayer.id) : -1;
+    return `
+      <div style="margin-bottom:10px">
+        <label>${label}</label>
+        <select id="${selectId}">
+          ${nobody}
+          ${state.players.map((p,i) => `<option value="${i}" ${i===currentIdx?'selected':''}>${p.name} (${p.gender})</option>`).join('')}
+        </select>
+      </div>`;
+  }
+
+  document.getElementById('courtEditSlots').innerHTML = `
+    <div style="background:var(--green-pale);border-radius:9px;padding:10px;margin-bottom:10px">
+      <div style="font-weight:800;color:var(--green);margin-bottom:6px">🟢 Team A</div>
+      ${slotSelect('Player 1', court.team1[0], 'ce_t1p1')}
+      ${slotSelect('Player 2', court.team1[1], 'ce_t1p2')}
+    </div>
+    <div style="background:#e3f2fd;border-radius:9px;padding:10px">
+      <div style="font-weight:800;color:var(--blue);margin-bottom:6px">🔵 Team B</div>
+      ${slotSelect('Player 1', court.team2[0], 'ce_t2p1')}
+      ${slotSelect('Player 2', court.team2[1], 'ce_t2p2')}
+    </div>`;
+
+  document.getElementById('courtEditModal').classList.add('open');
+}
+
+function closeCourtModal() {
+  document.getElementById('courtEditModal').classList.remove('open');
+  editingCourtIdx = null;
+}
+
+async function saveCourtEdit() {
+  const round = state.rounds[state.currentRound];
+  cons
